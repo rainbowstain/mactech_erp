@@ -1,0 +1,143 @@
+import { NextResponse } from "next/server";
+import { readSession } from "@/lib/auth";
+import { query } from "@/lib/db";
+
+const RESOURCES = {
+  clientes: {
+    table: "clientes",
+    fields: ["nombre", "run", "mail", "fono", "estado"],
+    required: ["nombre"],
+  },
+  equipos: {
+    table: "equipos",
+    fields: ["nombre", "estado"],
+    required: ["nombre"],
+  },
+  dispositivos: {
+    table: "dispositivos",
+    fields: ["nombre", "modelo", "estado"],
+    required: ["nombre", "modelo"],
+  },
+  servicios: {
+    table: "servicios",
+    fields: ["nombre", "precio", "costo", "estado"],
+    required: ["nombre"],
+  },
+  preguntas: {
+    table: "preguntas",
+    fields: ["descripcion", "estado"],
+    required: ["descripcion"],
+  },
+};
+
+function asText(value) {
+  return String(value || "").trim();
+}
+
+function asNullableText(value) {
+  const text = asText(value);
+  return text || null;
+}
+
+function asInt(value, fallback = 0) {
+  if (value === null || value === undefined || value === "") return fallback;
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.round(number) : fallback;
+}
+
+function asId(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
+}
+
+function cleanPayload(config, body) {
+  const payload = {};
+
+  for (const field of config.fields) {
+    if (field === "estado") payload[field] = asInt(body[field], 1) ? 1 : 0;
+    else if (field === "precio" || field === "costo") payload[field] = asInt(body[field], 0);
+    else if (field === "modelo") payload[field] = asInt(body[field], null);
+    else payload[field] = asNullableText(body[field]);
+  }
+
+  return payload;
+}
+
+function validate(config, payload) {
+  for (const field of config.required) {
+    if (!payload[field]) return "Complete los campos obligatorios.";
+  }
+  return null;
+}
+
+async function getConfig(params) {
+  const { resource, id } = await params;
+  return {
+    config: RESOURCES[resource],
+    id: asId(id),
+  };
+}
+
+export async function PUT(request, { params }) {
+  const session = await readSession();
+  if (!session) {
+    return NextResponse.json({ message: "No autorizado." }, { status: 401 });
+  }
+
+  const { config, id } = await getConfig(params);
+  if (!config) {
+    return NextResponse.json({ message: "Mantenedor invalido." }, { status: 404 });
+  }
+  if (!id) {
+    return NextResponse.json({ message: "ID invalido." }, { status: 400 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const payload = cleanPayload(config, body);
+  const validation = validate(config, payload);
+  if (validation) {
+    return NextResponse.json({ message: validation }, { status: 400 });
+  }
+
+  const setters = config.fields.map((field, index) => `${field} = $${index + 1}`);
+  const values = config.fields.map((field) => payload[field]);
+  values.push(id);
+
+  const result = await query(
+    `
+      update ${config.table}
+      set ${setters.join(", ")}
+      where id = $${values.length}
+      returning *
+    `,
+    values
+  );
+
+  if (!result.rows[0]) {
+    return NextResponse.json({ message: "Registro no encontrado." }, { status: 404 });
+  }
+
+  return NextResponse.json(result.rows[0]);
+}
+
+export async function DELETE(_request, { params }) {
+  const session = await readSession();
+  if (!session) {
+    return NextResponse.json({ message: "No autorizado." }, { status: 401 });
+  }
+
+  const { config, id } = await getConfig(params);
+  if (!config) {
+    return NextResponse.json({ message: "Mantenedor invalido." }, { status: 404 });
+  }
+  if (!id) {
+    return NextResponse.json({ message: "ID invalido." }, { status: 400 });
+  }
+
+  const result = await query(`update ${config.table} set estado = 0 where id = $1 returning *`, [id]);
+  if (!result.rows[0]) {
+    return NextResponse.json({ message: "Registro no encontrado." }, { status: 404 });
+  }
+
+  return NextResponse.json(result.rows[0]);
+}

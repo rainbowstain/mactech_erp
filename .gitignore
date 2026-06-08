@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+dist
+.env
+.env.*
+!.env.example
+*.log
+*.sql
+*.sqlite
+*.db
+.DS_Store
+local-legacy
+tmp
+coverage
