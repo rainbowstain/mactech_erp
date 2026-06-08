@@ -463,25 +463,36 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
         {message ? <p className="save-status">{message}</p> : null}
       </section>
 
-      <section className="legacy-block section-gap">
-        <div className="legacy-block-header">
-          <h2>Estado de Orden</h2>
-        </div>
-        <div className="revision-close-grid">
-          <ReadonlyField label="Valor Diagnostico" value={formatMoney(order.total_recepcion)} />
-          <ReadonlyField label="Valor Neto" value={formatMoney(displayTotals.subtotal)} />
-          <ReadonlyField label="IVA" value={formatMoney(displayTotals.iva)} />
-          <label className="legacy-field">
-            <span>Descuento:</span>
-            <input
-              inputMode="numeric"
-              value={descuento}
-              readOnly={isClosed}
-              onChange={(event) => setDescuento(event.target.value.replace(/\D/g, ""))}
-            />
-          </label>
-          <ReadonlyField label="Total" value={formatMoney(displayTotals.total)} />
-          {!isClosed ? (
+      {isClosed ? (
+        <section className="legacy-block section-gap">
+          <div className="legacy-block-header">
+            <h2>Orden cerrada</h2>
+          </div>
+          <div className="closed-review-notice">
+            <p>Esta orden ya fue cerrada. La revision solo muestra historial tecnico y diagnosticos.</p>
+            <Link className="ghost-button compact-button" href={`/erp/ordenes/${order.id}`}>
+              Ver resumen de cierre
+            </Link>
+          </div>
+        </section>
+      ) : (
+        <section className="legacy-block section-gap">
+          <div className="legacy-block-header">
+            <h2>Estado de Orden</h2>
+          </div>
+          <div className="revision-close-grid">
+            <ReadonlyField label="Valor Diagnostico" value={formatMoney(order.total_recepcion)} />
+            <ReadonlyField label="Valor Neto" value={formatMoney(displayTotals.subtotal)} />
+            <ReadonlyField label="IVA" value={formatMoney(displayTotals.iva)} />
+            <label className="legacy-field">
+              <span>Descuento:</span>
+              <input
+                inputMode="numeric"
+                value={descuento}
+                onChange={(event) => setDescuento(event.target.value.replace(/\D/g, ""))}
+              />
+            </label>
+            <ReadonlyField label="Total" value={formatMoney(displayTotals.total)} />
             <label className="legacy-field">
               <span>Metodo Pago:</span>
               <select value={metodopago} onChange={(event) => setMetodopago(event.target.value)}>
@@ -490,11 +501,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
                 <option value="REDBANK">REDBANK</option>
               </select>
             </label>
-          ) : (
-            <ReadonlyField label="Metodo Pago" value={metodopago} />
-          )}
-        </div>
-        {!isClosed ? (
+          </div>
           <div className="legacy-actions centered">
             <button
               className="primary-button inline-primary compact-button legacy-save"
@@ -505,8 +512,8 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
               Finalizar
             </button>
           </div>
-        ) : null}
-      </section>
+        </section>
+      )}
     </>
   );
 }
