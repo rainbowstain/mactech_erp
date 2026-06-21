@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Edit3, KeyRound, Plus, Save, ShieldCheck, Trash2, X } from "lucide-react";
+import { Edit3, KeyRound, Plus, RotateCcw, Save, ShieldCheck, Trash2, X } from "lucide-react";
 import { formatDateTime, textOrDash } from "@/lib/format";
+import DataTable from "../DataTable";
 
 function emptyValues() {
   return {
@@ -86,16 +87,21 @@ export default function UsersModule({ initialUsers, roles, currentUserId }) {
     }
   }
 
-  async function disableUser(user) {
+  async function toggleUserStatus(user) {
+    const nextEstado = !user.estado;
     setSaving(true);
     setMessage("");
     try {
-      const response = await fetch(`/api/erp/usuarios/${user.id}`, { method: "DELETE" });
+      const response = await fetch(`/api/erp/usuarios/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estado: nextEstado }),
+      });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "No se pudo deshabilitar usuario.");
+      if (!response.ok) throw new Error(payload.message || "No se pudo actualizar usuario.");
 
       setUsers((current) => current.map((row) => (row.id === payload.id ? payload : row)));
-      setMessage("Usuario deshabilitado.");
+      setMessage(nextEstado ? "Usuario reactivado." : "Usuario deshabilitado.");
       await refreshUsers();
     } catch (error) {
       setMessage(error.message);
@@ -199,75 +205,77 @@ export default function UsersModule({ initialUsers, roles, currentUserId }) {
         <div className="panel-header">
           <h2>Cuentas actuales</h2>
         </div>
-        <div className="table-wrap users-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Email</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th>Actualizado</th>
-                <th className="text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => {
+        <DataTable
+          rows={users}
+          emptyMessage="Sin usuarios registrados."
+          columns={[
+            {
+              key: "name",
+              label: "Usuario",
+              value: (user) => `${user.name || ""} ${Number(user.id) === Number(currentUserId) ? "Sesion actual" : ""}`,
+              render: (user) => (
+                <>
+                  <strong>{textOrDash(user.name)}</strong>
+                  {Number(user.id) === Number(currentUserId) ? <span className="subtext">Sesion actual</span> : null}
+                </>
+              ),
+            },
+            { key: "email", label: "Email" },
+            {
+              key: "role",
+              label: "Rol",
+              value: (user) => roleMap.get(user.role)?.label || user.role,
+              filterOptions: roles.map((role) => ({ value: role.label, label: role.label })),
+              render: (user) => {
                 const role = roleMap.get(user.role);
-                const isCurrentUser = Number(user.id) === Number(currentUserId);
-                return (
-                  <tr key={user.id}>
-                    <td>
-                      <strong>{textOrDash(user.name)}</strong>
-                      {isCurrentUser ? <span className="subtext">Sesion actual</span> : null}
-                    </td>
-                    <td>{user.email}</td>
-                    <td>
-                      <span className={`pill role-pill role-${user.role}`}>{role?.label || user.role}</span>
-                    </td>
-                    <td>
-                      <span className={`pill ${user.estado ? "green" : "gray"}`}>
-                        {user.estado ? "Activo" : "Deshabilitado"}
-                      </span>
-                    </td>
-                    <td>{formatDateTime(user.updated_at || user.created_at)}</td>
-                    <td className="text-center">
-                      <div className="action-group">
-                        <button className="action-button" type="button" title="Editar" onClick={() => openEdit(user)}>
-                          <Edit3 size={15} aria-hidden="true" />
-                        </button>
-                        <button
-                          className="action-button"
-                          type="button"
-                          title="Cambiar password"
-                          onClick={() => openEdit(user)}
-                        >
-                          <KeyRound size={15} aria-hidden="true" />
-                        </button>
-                        <button
-                          className="action-button danger"
-                          type="button"
-                          title="Deshabilitar"
-                          disabled={saving || !user.estado}
-                          onClick={() => disableUser(user)}
-                        >
-                          <Trash2 size={15} aria-hidden="true" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {!users.length ? (
-                <tr>
-                  <td className="empty-state" colSpan="6">
-                    Sin usuarios registrados.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+                return <span className={`pill role-pill role-${user.role}`}>{role?.label || user.role}</span>;
+              },
+            },
+            {
+              key: "estado",
+              label: "Estado",
+              value: (user) => (user.estado ? "Activo" : "Deshabilitado"),
+              filterOptions: [
+                { value: "Activo", label: "Activo" },
+                { value: "Deshabilitado", label: "Deshabilitado" },
+              ],
+              render: (user) => (
+                <span className={`pill ${user.estado ? "green" : "gray"}`}>{user.estado ? "Activo" : "Deshabilitado"}</span>
+              ),
+            },
+            {
+              key: "updated_at",
+              label: "Actualizado",
+              value: (user) => formatDateTime(user.updated_at || user.created_at),
+              render: (user) => formatDateTime(user.updated_at || user.created_at),
+            },
+            {
+              key: "actions",
+              label: "Acciones",
+              align: "center",
+              filter: false,
+              render: (user) => (
+                <div className="action-group">
+                  <button className="action-button" type="button" title="Editar" onClick={() => openEdit(user)}>
+                    <Edit3 size={15} aria-hidden="true" />
+                  </button>
+                  <button className="action-button" type="button" title="Cambiar password" onClick={() => openEdit(user)}>
+                    <KeyRound size={15} aria-hidden="true" />
+                  </button>
+                  <button
+                    className={`action-button ${user.estado ? "danger" : ""}`}
+                    type="button"
+                    title={user.estado ? "Deshabilitar" : "Reactivar"}
+                    disabled={saving}
+                    onClick={() => toggleUserStatus(user)}
+                  >
+                    {user.estado ? <Trash2 size={15} aria-hidden="true" /> : <RotateCcw size={15} aria-hidden="true" />}
+                  </button>
+                </div>
+              ),
+            },
+          ]}
+        />
       </section>
     </div>
   );

@@ -12,7 +12,7 @@ export default async function InventoryProductsPage() {
 
   return (
     <Shell active="inventario-productos" title="Inventario Productos">
-      <InventoryModule area="productos" title="Productos" initialItems={items} stats={stats} />
+      <InventoryModule area="productos" title="Productos" initialItems={items} stats={stats} brands={[]} devices={[]} parts={[]} />
     </Shell>
   );
 }

@@ -3,6 +3,8 @@ import { readSession } from "@/lib/auth";
 import { transaction } from "@/lib/db";
 import { materializeOrderSale } from "@/lib/finance";
 
+const DEFAULT_CLOSE_NOTE = "Equipo funciona correctamente, cliente retira conforme.";
+
 function asText(value) {
   return String(value || "").trim();
 }
@@ -22,8 +24,9 @@ function asPositiveInt(value) {
   return Number.isInteger(number) && number > 0 ? number : null;
 }
 
-function calcTotals({ serviceTotal, descuento }) {
-  const gross = Math.max(0, asInt(serviceTotal) - asInt(descuento));
+function calcTotals({ serviceTotal, descuento, fallbackTotal = 0 }) {
+  const baseTotal = asInt(serviceTotal) > 0 ? asInt(serviceTotal) : asInt(fallbackTotal);
+  const gross = Math.max(0, baseTotal - asInt(descuento));
   const net = Math.round(gross / 1.19);
   return {
     subtotal: net,
@@ -31,6 +34,10 @@ function calcTotals({ serviceTotal, descuento }) {
     descuento: asInt(descuento),
     total: gross,
   };
+}
+
+function stockError(producto, available, requested) {
+  return `Stock insuficiente para ${producto || "repuesto"}: disponible ${available}, solicitado ${requested}.`;
 }
 
 export async function POST(request, { params }) {
@@ -48,13 +55,9 @@ export async function POST(request, { params }) {
   const body = await request.json().catch(() => ({}));
   const action = body.action === "close" ? "close" : "save";
   const estado = asPositiveInt(body.estado) || 2;
-  const observacion = asNullableText(body.observacion);
+  const observacion = asNullableText(body.observacion) || (action === "close" ? DEFAULT_CLOSE_NOTE : null);
   const services = Array.isArray(body.services) ? body.services : [];
   const repuestos = Array.isArray(body.repuestos) ? body.repuestos : [];
-  const totals = calcTotals({
-    serviceTotal: body.serviceTotal,
-    descuento: body.descuento,
-  });
   const metodopago = asNullableText(body.metodopago);
 
   if (action === "close" && !metodopago) {
@@ -63,11 +66,22 @@ export async function POST(request, { params }) {
 
   try {
     const result = await transaction(async (db) => {
-      const orderResult = await db.query("select id, estado, id_ultima_garantia from ordenes where id = $1 limit 1", [orderId]);
+      const orderResult = await db.query(
+        "select id, estado, id_ultima_garantia, total_recepcion from ordenes where id = $1 limit 1",
+        [orderId]
+      );
       const order = orderResult.rows[0];
       if (!order) {
         return { missing: true };
       }
+      if (Number(order.estado) >= 5) {
+        return { closed: true };
+      }
+      const totals = calcTotals({
+        serviceTotal: body.serviceTotal,
+        descuento: body.descuento,
+        fallbackTotal: order.total_recepcion,
+      });
       const warrantyId = Number(order.estado) === 4 ? order.id_ultima_garantia || null : null;
 
       if (observacion) {
@@ -115,6 +129,10 @@ export async function POST(request, { params }) {
         }
       }
 
+      await db.query("alter table inventario_items add column if not exists ultimo_precio_venta integer");
+      await db.query("alter table inventario_items add column if not exists ultimo_precio_fecha timestamptz");
+      await db.query("alter table inventario_items add column if not exists ultima_orden_id integer");
+
       await db.query("delete from orden_repuestos where orden_id = $1", [orderId]);
       for (const part of repuestos) {
         const itemId = asPositiveInt(part.inventario_item_id);
@@ -126,7 +144,12 @@ export async function POST(request, { params }) {
         if (!item) continue;
 
         const unitCost = asInt(part.costo_unitario, item.valor_original || 0);
-        const unitPrice = asInt(part.precio_unitario, 0);
+        const unitPrice = asInt(part.precio_unitario, item.ultimo_precio_venta ?? item.valor_venta ?? 0);
+
+        if (action === "close" && Number(item.cantidad || 0) < quantity) {
+          throw new Error(stockError(item.producto, Number(item.cantidad || 0), quantity));
+        }
+
         await db.query(
           `
             insert into orden_repuestos (
@@ -146,6 +169,18 @@ export async function POST(request, { params }) {
             session.name || session.email,
           ]
         );
+
+        // Guardar el ultimo valor cobrado en el repuesto del inventario.
+        if (unitPrice > 0) {
+          await db.query(
+            `
+              update inventario_items
+              set ultimo_precio_venta = $1, ultimo_precio_fecha = now(), ultima_orden_id = $2, updated_at = now()
+              where id = $3
+            `,
+            [unitPrice, orderId, itemId]
+          );
+        }
 
         if (action === "close") {
           const previous = Number(item.cantidad || 0);
@@ -209,10 +244,13 @@ export async function POST(request, { params }) {
     if (result.missing) {
       return NextResponse.json({ message: "Orden no encontrada." }, { status: 404 });
     }
+    if (result.closed) {
+      return NextResponse.json({ message: "La orden ya esta cerrada y no puede modificarse desde revision." }, { status: 409 });
+    }
 
     return NextResponse.json(result);
   } catch (error) {
     console.error("save revision failed", error);
-    return NextResponse.json({ message: "No se pudo guardar la revision." }, { status: 500 });
+    return NextResponse.json({ message: error.message || "No se pudo guardar la revision." }, { status: 500 });
   }
 }

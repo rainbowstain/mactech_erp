@@ -25,8 +25,9 @@ function ReadonlyField({ label, value }) {
   );
 }
 
-function calcTotals(serviceTotal, discount) {
-  const total = Math.max(0, toInt(serviceTotal) - toInt(discount));
+function calcTotals(serviceTotal, discount, fallbackTotal = 0) {
+  const baseTotal = toInt(serviceTotal) > 0 ? toInt(serviceTotal) : toInt(fallbackTotal);
+  const total = Math.max(0, baseTotal - toInt(discount));
   const subtotal = Math.round(total / 1.19);
   return {
     subtotal,
@@ -79,7 +80,10 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
     () => partRows.reduce((sum, part) => sum + toInt(part.precio_unitario) * toInt(part.cantidad), 0),
     [partRows]
   );
-  const totals = useMemo(() => calcTotals(serviceTotal + partsTotal, descuento), [serviceTotal, partsTotal, descuento]);
+  const totals = useMemo(
+    () => calcTotals(serviceTotal + partsTotal, descuento, order.total_recepcion),
+    [serviceTotal, partsTotal, descuento, order.total_recepcion]
+  );
   const displayTotals = isClosed
     ? {
         subtotal: toInt(order.subtotal),
@@ -157,7 +161,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
           marca: item.marca,
           cantidad: 1,
           costo_unitario: toInt(item.valor_original),
-          precio_unitario: 0,
+          precio_unitario: toInt(item.ultimo_precio_venta || item.valor_venta),
           stock: toInt(item.cantidad),
         },
       ];
@@ -170,7 +174,8 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
       current.map((row) => {
         if (row.key !== key) return row;
         const next = { ...row, ...patch };
-        next.cantidad = Math.max(1, toInt(next.cantidad, 1));
+        next.cantidad = Math.max(1, toInt(next.cantidad));
+        if (toInt(next.stock) > 0) next.cantidad = Math.min(next.cantidad, toInt(next.stock));
         next.costo_unitario = toInt(next.costo_unitario);
         next.precio_unitario = toInt(next.precio_unitario);
         return next;
@@ -249,7 +254,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
           <ReadonlyField label="Telefono" value={order.cliente_fono} />
           <ReadonlyField label="Mail" value={order.cliente_mail} />
           <ReadonlyField label="Fecha Entrega" value={formatDate(order.fecha_entrega)} />
-          <ReadonlyField label="Equipo" value={order.equipo_nombre} />
+          <ReadonlyField label="Marca" value={order.equipo_nombre} />
           <ReadonlyField label="Modelo" value={order.dispositivo_nombre} />
           <ReadonlyField label="IMEI" value={order.imei} />
           <ReadonlyField label="Codigo" value={order.codigo} />
@@ -405,7 +410,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
                       <option value="">Seleccione Repuesto</option>
                       {workshopItems.map((item) => (
                         <option key={item.id} value={item.id}>
-                          {item.producto} - Stock {item.cantidad}
+                          {item.producto} - {formatMoney(item.valor_venta)} - Stock {item.cantidad}
                         </option>
                       ))}
                     </select>
@@ -435,7 +440,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
                     onChange={(event) => updatePart(part.key, { precio_unitario: event.target.value.replace(/\D/g, "") })}
                     title="Precio venta"
                   />
-                  <strong>{formatMoney(toInt(part.costo_unitario) * toInt(part.cantidad))}</strong>
+                  <strong>{formatMoney(toInt(part.precio_unitario) * toInt(part.cantidad))}</strong>
                   {!isClosed ? (
                     <button type="button" onClick={() => setPartRows((current) => current.filter((row) => row.key !== part.key))}>
                       x

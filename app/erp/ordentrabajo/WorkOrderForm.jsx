@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Trash2 } from "lucide-react";
+import { formatMoney } from "@/lib/format";
 
 function nowForInput() {
   const date = new Date();
@@ -21,8 +23,9 @@ function Field({ label, required, children }) {
   );
 }
 
-export default function WorkOrderForm({ equipment, devices, states, questions }) {
+export default function WorkOrderForm({ equipment, devices, states, questions, parts = [], workshopItems = [] }) {
   const router = useRouter();
+  const [deviceItems, setDeviceItems] = useState(workshopItems);
   const [status, setStatus] = useState("");
   const [loadingClient, setLoadingClient] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -42,6 +45,8 @@ export default function WorkOrderForm({ equipment, devices, states, questions })
     fecha_entrega: "",
     id_equipo: "",
     id_dispositivo: "",
+    reparacion_id: "",
+    reparaciones: [{ reparacion_id: "", inventario_item_id: "", precio_unitario: "" }],
     estado_dispositivo: "",
     codigo: "",
     imei: "",
@@ -58,6 +63,44 @@ export default function WorkOrderForm({ equipment, devices, states, questions })
     if (!order.estado_dispositivo) return [];
     return questions.slice(0, 14);
   }, [order.estado_dispositivo, questions]);
+
+  const repairOptions = useMemo(
+    () => parts.filter((part) => Number(part.estado) === 1),
+    [parts]
+  );
+
+  // Carga los repuestos del dispositivo bajo demanda (evita traer todo el catalogo).
+  useEffect(() => {
+    if (!order.id_dispositivo) {
+      setDeviceItems([]);
+      return;
+    }
+    let active = true;
+    fetch(`/api/erp/inventario/items?area=taller&dispositivoId=${order.id_dispositivo}&pageSize=200`)
+      .then((response) => response.json().catch(() => ({})))
+      .then((payload) => {
+        if (active) setDeviceItems(payload.items || []);
+      })
+      .catch(() => {
+        if (active) setDeviceItems([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [order.id_dispositivo]);
+
+  const matchingWorkshopItems = useMemo(() => {
+    if (!order.id_dispositivo) return new Map();
+    const itemsByRepair = new Map();
+    for (const item of deviceItems) {
+      if (Number(item.estado) !== 1) continue;
+      if (Number(item.dispositivo_id) !== Number(order.id_dispositivo)) continue;
+      const key = String(item.repuesto_id || "");
+      if (!itemsByRepair.has(key)) itemsByRepair.set(key, []);
+      itemsByRepair.get(key).push(item);
+    }
+    return itemsByRepair;
+  }, [order.id_dispositivo, deviceItems]);
 
   async function searchClient() {
     const run = client.run.trim();
@@ -119,9 +162,63 @@ export default function WorkOrderForm({ equipment, devices, states, questions })
 
     setOrder((current) => {
       if (field === "id_equipo") {
-        return { ...current, id_equipo: value, id_dispositivo: "", estado_dispositivo: "" };
+        return {
+          ...current,
+          id_equipo: value,
+          id_dispositivo: "",
+          reparacion_id: "",
+          reparaciones: [{ reparacion_id: "", inventario_item_id: "", precio_unitario: "" }],
+          estado_dispositivo: "",
+        };
+      }
+      if (field === "id_dispositivo") {
+        return {
+          ...current,
+          id_dispositivo: value,
+          reparacion_id: "",
+          reparaciones: [{ reparacion_id: "", inventario_item_id: "", precio_unitario: "" }],
+        };
       }
       return { ...current, [field]: value };
+    });
+  }
+
+  function updateRepair(index, field, value) {
+    setOrder((current) => {
+      const reparaciones = current.reparaciones.map((repair, repairIndex) => {
+        if (repairIndex !== index) return repair;
+        if (field === "reparacion_id") return { ...repair, reparacion_id: value, inventario_item_id: "", precio_unitario: "" };
+        if (field === "inventario_item_id") {
+          const found = deviceItems.find((item) => String(item.id) === String(value));
+          const lastPrice = found ? found.ultimo_precio_venta || found.valor_venta || "" : "";
+          return { ...repair, inventario_item_id: value, precio_unitario: lastPrice ? String(lastPrice) : repair.precio_unitario };
+        }
+        return { ...repair, [field]: value };
+      });
+      return {
+        ...current,
+        reparaciones,
+        reparacion_id: reparaciones.find((repair) => repair.reparacion_id)?.reparacion_id || "",
+      };
+    });
+  }
+
+  function addRepair() {
+    setOrder((current) => ({
+      ...current,
+      reparaciones: [...current.reparaciones, { reparacion_id: "", inventario_item_id: "", precio_unitario: "" }],
+    }));
+  }
+
+  function removeRepair(index) {
+    setOrder((current) => {
+      const reparaciones = current.reparaciones.filter((_, repairIndex) => repairIndex !== index);
+      const nextReparaciones = reparaciones.length ? reparaciones : [{ reparacion_id: "", inventario_item_id: "", precio_unitario: "" }];
+      return {
+        ...current,
+        reparaciones: nextReparaciones,
+        reparacion_id: nextReparaciones.find((repair) => repair.reparacion_id)?.reparacion_id || "",
+      };
     });
   }
 
@@ -218,6 +315,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions })
               <Field label="Nombre" required>
                 <input
                   placeholder="nombre"
+                  required
                   value={client.nombre}
                   onChange={(event) => updateClient("nombre", event.target.value)}
                 />
@@ -237,16 +335,16 @@ export default function WorkOrderForm({ equipment, devices, states, questions })
                     inputMode="numeric"
                     placeholder="Contacto"
                     value={client.fono}
-                    onChange={(event) => updateClient("fono", event.target.value.slice(0, 8))}
+                    onChange={(event) => updateClient("fono", event.target.value.replace(/\D/g, "").slice(0, 8))}
                   />
                 </div>
               </Field>
             </div>
 
             <div className="legacy-form-grid legacy-form-grid-three">
-              <Field label="Equipo" required>
+              <Field label="Marca" required>
                 <div className="legacy-input-button compact">
-                  <select value={order.id_equipo} onChange={(event) => updateOrder("id_equipo", event.target.value)}>
+                  <select value={order.id_equipo} onChange={(event) => updateOrder("id_equipo", event.target.value)} required>
                     <option value="">Seleccionar...</option>
                     {equipment.map((item) => (
                       <option key={item.id} value={item.id}>
@@ -262,6 +360,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions })
                   <select
                     value={order.id_dispositivo}
                     onChange={(event) => updateOrder("id_dispositivo", event.target.value)}
+                    required
                   >
                     <option value="">Seleccionar...</option>
                     {filteredDevices.map((item) => (
@@ -280,6 +379,73 @@ export default function WorkOrderForm({ equipment, devices, states, questions })
                   onChange={(event) => updateOrder("codigo", event.target.value)}
                 />
               </Field>
+            </div>
+
+            <div className="legacy-form-grid legacy-form-grid-three">
+              <div className="legacy-field legacy-field-form-wide">
+                <span>Reparaciones <b>*</b></span>
+                <div className="repair-list">
+                  {order.reparaciones.map((repair, index) => {
+                    const availableItems = matchingWorkshopItems.get(String(repair.reparacion_id || "")) || [];
+                    return (
+                      <div className="repair-row" key={index}>
+                        <select
+                          value={repair.reparacion_id}
+                          onChange={(event) => updateRepair(index, "reparacion_id", event.target.value)}
+                          disabled={!order.id_dispositivo}
+                          required={index === 0}
+                        >
+                          <option value="">{order.id_dispositivo ? "Seleccionar reparacion..." : "Seleccione modelo primero"}</option>
+                          {repairOptions.map((part) => (
+                            <option key={part.id} value={part.id}>
+                              {part.nombre}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={repair.inventario_item_id}
+                          onChange={(event) => updateRepair(index, "inventario_item_id", event.target.value)}
+                          disabled={!repair.reparacion_id || !availableItems.length}
+                        >
+                          <option value="">
+                            {!repair.reparacion_id
+                              ? "Seleccione reparacion"
+                              : availableItems.length
+                                ? "Tipo disponible..."
+                                : "Sin alternativas cargadas"}
+                          </option>
+                          {availableItems.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.producto} - {formatMoney(item.ultimo_precio_venta || item.valor_venta)}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          className="repair-row-price"
+                          inputMode="numeric"
+                          value={repair.precio_unitario}
+                          onChange={(event) => updateRepair(index, "precio_unitario", event.target.value.replace(/\D/g, ""))}
+                          placeholder="Precio cobrado"
+                          aria-label="Precio cobrado al cliente"
+                        />
+                        <button
+                          className="ghost-button compact-button repair-row-action"
+                          type="button"
+                          onClick={() => removeRepair(index)}
+                          disabled={order.reparaciones.length === 1}
+                          title="Quitar reparacion"
+                        >
+                          <Trash2 size={15} aria-hidden="true" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <button className="ghost-button compact-button inline-primary repair-add-button" type="button" onClick={addRepair}>
+                    <Plus size={15} aria-hidden="true" />
+                    Agregar reparacion
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="legacy-form-grid legacy-form-grid-three">
@@ -325,6 +491,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions })
               <select
                 value={order.estado_dispositivo}
                 onChange={(event) => updateOrder("estado_dispositivo", event.target.value)}
+                required
               >
                 <option value="">Seleccionar...</option>
                 {states.map((state) => (

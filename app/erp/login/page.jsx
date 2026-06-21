@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { redirect } from "next/navigation";
 import { readSession } from "@/lib/auth";
 import LoginForm from "./LoginForm";
@@ -8,20 +10,14 @@ export default async function LoginPage() {
 
   return (
     <main className="login-shell">
-      <section className="legacy-login-stage" aria-label="Inicio de sesion MacTech">
-        <div className="legacy-login-art" aria-hidden="true">
-          <span className="legacy-login-orbit legacy-login-orbit-a" />
-          <span className="legacy-login-orbit legacy-login-orbit-b" />
-          <span className="legacy-login-device" />
-        </div>
-        <div className="legacy-login-panel">
-          <div className="brand-mark">
-            <span className="login-logo" aria-hidden="true" />
-            <strong>MacTech</strong>
-            <span>Ordenes de trabajo y taller</span>
-          </div>
-          <LoginForm />
-        </div>
+      <section className="login-card" aria-label="Inicio de sesion MacTech">
+        <span className="login-logo-mark" role="img" aria-label="MacTech" />
+        <p className="login-version">ERP V1</p>
+        <LoginForm />
+        <Link className="login-back" href="/">
+          <ArrowLeft size={16} aria-hidden="true" />
+          Volver a la web
+        </Link>
       </section>
     </main>
   );

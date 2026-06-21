@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { CalendarDays } from "lucide-react";
-import { formatMoney, textOrDash } from "@/lib/format";
+import { formatDate, formatMoney, textOrDash } from "@/lib/format";
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -19,6 +19,18 @@ function moneyShort(value) {
   if (Math.abs(amount) >= 1000000) return `$${Math.round(amount / 1000000)}M`;
   if (Math.abs(amount) >= 1000) return `$${Math.round(amount / 1000)}K`;
   return formatMoney(amount);
+}
+
+function periodLabel(period) {
+  if (period === "day") return "Diario";
+  if (period === "week") return "Semanal";
+  if (period === "year") return "Anual";
+  return "Mensual";
+}
+
+function inputDateForPeriod(summary) {
+  if (summary.period === "year") return `${summary.year}-01-01`;
+  return summary.date || summary.start;
 }
 
 function EvolutionChart({ rows }) {
@@ -80,7 +92,7 @@ function MixChart({ rows, total }) {
   );
 }
 
-export default function FinanceDashboard({ summary, annualRows, insights }) {
+export default function FinanceDashboard({ summary, annualRows, insights, dailyRows = [] }) {
   const router = useRouter();
   const margin = summary.ingresos ? summary.utilidad_neta / summary.ingresos : 0;
   const costRatio = summary.ingresos ? summary.costos / summary.ingresos : 0;
@@ -88,28 +100,49 @@ export default function FinanceDashboard({ summary, annualRows, insights }) {
     ? (summary.gastos_operativos + summary.publicidad + summary.otros_gastos) / summary.ingresos
     : 0;
   const bestMonth = annualRows.reduce((best, row) => (row.utilidad_neta > best.utilidad_neta ? row : best), annualRows[0]);
+  const yearOptions = Array.from({ length: 7 }, (_, index) => summary.year - 3 + index);
 
-  function updatePeriod(event) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    router.push(`/erp/finanzas?year=${form.get("year")}&month=${form.get("month")}`);
+  function updatePeriod(patch = {}) {
+    const params = new URLSearchParams({
+      period: patch.period ?? summary.period ?? "month",
+      year: patch.year ?? summary.year,
+      month: patch.month ?? summary.month,
+      date: patch.date ?? inputDateForPeriod(summary),
+    });
+    router.push(`/erp/finanzas?${params.toString()}`);
   }
 
   return (
     <div className="finance-page">
       <section className="legacy-block">
         <div className="legacy-block-header">
-          <h2>Resultado Mensual</h2>
-          <form className="finance-period-form" onSubmit={updatePeriod}>
+          <h2>Resultado {periodLabel(summary.period)}</h2>
+          <div className="finance-period-form">
             <CalendarDays size={16} aria-hidden="true" />
-            <input name="year" inputMode="numeric" defaultValue={summary.year} />
-            <select name="month" defaultValue={summary.month}>
-              {MONTHS.map((month, index) => (
-                <option key={month} value={index + 1}>{month}</option>
+            <select value={summary.period || "month"} onChange={(event) => updatePeriod({ period: event.target.value })}>
+              <option value="day">Dia</option>
+              <option value="week">Semana</option>
+              <option value="month">Mes</option>
+              <option value="year">Año</option>
+            </select>
+            {summary.period === "day" || summary.period === "week" ? (
+              <input type="date" value={inputDateForPeriod(summary)} onChange={(event) => updatePeriod({ date: event.target.value })} />
+            ) : null}
+            <select value={summary.year} onChange={(event) => updatePeriod({ year: event.target.value })} aria-label="Año">
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
               ))}
             </select>
-            <button className="ghost-button compact-button" type="submit">Ver</button>
-          </form>
+            {summary.period !== "year" ? (
+              <select value={summary.month} onChange={(event) => updatePeriod({ month: event.target.value })}>
+                {MONTHS.map((month, index) => (
+                  <option key={month} value={index + 1}>{month}</option>
+                ))}
+              </select>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -138,7 +171,7 @@ export default function FinanceDashboard({ summary, annualRows, insights }) {
       </section>
 
       <section className="panel">
-        <div className="panel-header"><h2>Detalle del Mes</h2></div>
+        <div className="panel-header"><h2>Detalle del Periodo</h2></div>
         <div className="finance-breakdown">
           <div><span>Ingresos productos</span><strong>{formatMoney(summary.ingresos_productos)}</strong></div>
           <div><span>Ingresos OT</span><strong>{formatMoney(summary.ingresos_ot)}</strong></div>
@@ -148,6 +181,43 @@ export default function FinanceDashboard({ summary, annualRows, insights }) {
           <div><span>% Eduardo promedio</span><strong>{pct(summary.porcentaje_eduardo_promedio)}</strong></div>
           <div><span>% Tienda promedio</span><strong>{pct(summary.porcentaje_tienda_promedio)}</strong></div>
           <div><span>Tramo operativo</span><strong>{summary.tramo_descripcion || "Sin descripcion"}</strong></div>
+        </div>
+      </section>
+
+      <section className="panel section-gap">
+        <div className="panel-header"><h2>{summary.period === "year" ? "Resultado mensual" : "Resultado diario"}</h2></div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{summary.period === "year" ? "Mes" : "Fecha"}</th>
+                <th>Ingresos</th>
+                <th>Costos</th>
+                <th>Gastos</th>
+                <th>Utilidad</th>
+                <th>OT</th>
+                <th>Productos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(summary.period === "year" ? annualRows : dailyRows).map((row) => (
+                <tr key={summary.period === "year" ? row.month : row.fecha}>
+                  <td>{summary.period === "year" ? MONTHS[(row.month || 1) - 1] : formatDate(row.fecha)}</td>
+                  <td>{formatMoney(row.ingresos)}</td>
+                  <td>{formatMoney(row.costos)}</td>
+                  <td>{formatMoney(summary.period === "year" ? row.gastos_operativos + row.publicidad + row.otros_gastos : row.gastos)}</td>
+                  <td><strong>{formatMoney(summary.period === "year" ? row.utilidad_neta : row.utilidad)}</strong></td>
+                  <td>{formatMoney(row.ingresos_ot)}</td>
+                  <td>{formatMoney(row.ingresos_productos)}</td>
+                </tr>
+              ))}
+              {!(summary.period === "year" ? annualRows : dailyRows).length ? (
+                <tr>
+                  <td colSpan="7" className="empty-state">Sin movimientos para este periodo.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
         </div>
       </section>
 

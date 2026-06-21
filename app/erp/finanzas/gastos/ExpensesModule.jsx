@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
-import { formatMoney, textOrDash } from "@/lib/format";
+import { Plus, RotateCcw, Trash2 } from "lucide-react";
+import { formatDate, formatMoney, textOrDash } from "@/lib/format";
 
 const TYPES = [
   { value: "operativo", label: "Operativo" },
@@ -19,9 +19,10 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
 
   async function submitExpense(event) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setSaving(true);
     setMessage("");
-    const form = Object.fromEntries(new FormData(event.currentTarget));
+    const form = Object.fromEntries(new FormData(formElement));
     try {
       const response = await fetch("/api/erp/finanzas/gastos", {
         method: "POST",
@@ -30,7 +31,7 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "No se pudo guardar.");
-      event.currentTarget.reset();
+      formElement.reset();
       setMessage("Gasto registrado.");
       router.refresh();
     } catch (error) {
@@ -42,9 +43,10 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
 
   async function submitRecurring(event) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setSaving(true);
     setMessage("");
-    const form = Object.fromEntries(new FormData(event.currentTarget));
+    const form = Object.fromEntries(new FormData(formElement));
     try {
       const response = await fetch("/api/erp/finanzas/recurrentes", {
         method: "POST",
@@ -53,7 +55,7 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "No se pudo guardar.");
-      event.currentTarget.reset();
+      formElement.reset();
       setMessage("Gasto recurrente registrado.");
       router.refresh();
     } catch (error) {
@@ -63,11 +65,16 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
     }
   }
 
-  async function disable(endpoint, id) {
+  async function toggleStatus(endpoint, item) {
+    const nextEstado = item.estado ? 0 : 1;
     setMessage("");
-    const response = await fetch(`${endpoint}?id=${id}`, { method: "DELETE" });
+    const response = await fetch(endpoint, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: item.id, estado: nextEstado }),
+    });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) setMessage(payload.message || "No se pudo deshabilitar.");
+    if (!response.ok) setMessage(payload.message || "No se pudo actualizar el estado.");
     else router.refresh();
   }
 
@@ -106,13 +113,22 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
             <tbody>
               {expenses.map((expense) => (
                 <tr key={expense.id}>
-                  <td>{new Date(expense.fecha).toLocaleDateString("es-CL")}</td>
+                  <td>{formatDate(expense.fecha)}</td>
                   <td>{expense.tipo}</td>
                   <td>{expense.categoria}</td>
                   <td>{textOrDash(expense.descripcion)}</td>
                   <td>{formatMoney(expense.monto)}</td>
                   <td className="text-center"><span className={`pill ${expense.estado ? "green" : "gray"}`}>{expense.estado ? "Activo" : "Inactivo"}</span></td>
-                  <td><button className="action-button danger" type="button" onClick={() => disable("/api/erp/finanzas/gastos", expense.id)}><Trash2 size={15} /></button></td>
+                  <td>
+                    <button
+                      className={`action-button ${expense.estado ? "danger" : ""}`}
+                      type="button"
+                      title={expense.estado ? "Deshabilitar" : "Reactivar"}
+                      onClick={() => toggleStatus("/api/erp/finanzas/gastos", expense)}
+                    >
+                      {expense.estado ? <Trash2 size={15} /> : <RotateCcw size={15} />}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -134,7 +150,16 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
                   <td>{textOrDash(expense.descripcion)}</td>
                   <td>{formatMoney(expense.monto)}</td>
                   <td className="text-center"><span className={`pill ${expense.estado ? "green" : "gray"}`}>{expense.estado ? "Activo" : "Inactivo"}</span></td>
-                  <td><button className="action-button danger" type="button" onClick={() => disable("/api/erp/finanzas/recurrentes", expense.id)}><Trash2 size={15} /></button></td>
+                  <td>
+                    <button
+                      className={`action-button ${expense.estado ? "danger" : ""}`}
+                      type="button"
+                      title={expense.estado ? "Deshabilitar" : "Reactivar"}
+                      onClick={() => toggleStatus("/api/erp/finanzas/recurrentes", expense)}
+                    >
+                      {expense.estado ? <Trash2 size={15} /> : <RotateCcw size={15} />}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

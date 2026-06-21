@@ -22,7 +22,7 @@ export default async function OrderPdfPage({ params }) {
   if (!order) notFound();
 
   return (
-    <main className="print-page">
+    <main className="print-page work-order-print-page">
       <div className="print-actions no-print">
         <Link className="ghost-button compact-button" href={`/erp/ordenes/${order.id}`}>
           Volver
@@ -54,7 +54,7 @@ export default async function OrderPdfPage({ params }) {
               <div>
                 <PrintField label="Nombre" value={order.cliente_nombre} />
                 <PrintField label="Contacto" value={order.cliente_fono} />
-                <PrintField label="Equipo" value={order.equipo_nombre} />
+                <PrintField label="Marca" value={order.equipo_nombre} />
               </div>
               <div>
                 <PrintField label="Rut" value={order.cliente_run} />
@@ -95,18 +95,24 @@ export default async function OrderPdfPage({ params }) {
           <table className="legacy-services-table">
             <thead>
               <tr>
-                <th>Servicios</th>
+                <th>Servicios / Repuestos</th>
                 <th>Valor</th>
               </tr>
             </thead>
             <tbody>
+              {order.repuestos.map((part) => (
+                <tr key={`part-${part.id}`}>
+                  <td>{textOrDash(part.producto)}</td>
+                  <td>{formatMoney(part.total_venta)}</td>
+                </tr>
+              ))}
               {order.services.map((service) => (
                 <tr key={service.id}>
                   <td>{textOrDash(service.nombre)}</td>
                   <td>{formatMoney(service.precio)}</td>
                 </tr>
               ))}
-              {!order.services.length ? (
+              {!order.services.length && !order.repuestos.length ? (
                 <tr>
                   <td colSpan="2">Sin servicios asociados.</td>
                 </tr>

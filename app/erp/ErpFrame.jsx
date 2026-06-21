@@ -9,8 +9,8 @@ import {
   CreditCard,
   DollarSign,
   FileBarChart,
+  Globe,
   LayoutDashboard,
-  Menu,
   PackageSearch,
   PanelLeftClose,
   PanelLeftOpen,
@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import LogoutButton from "./LogoutButton";
 import ThemeToggle from "./ThemeToggle";
+
+const publicWebUrl = process.env.NEXT_PUBLIC_WEB_URL || "/";
 
 const orderItems = [
   { href: "/erp/ordenes", label: "Ordenes de trabajo", icon: ClipboardList, active: "ordenes" },
@@ -152,12 +154,13 @@ export default function ErpFrame({ active, title, session, children }) {
       <main className="main">
         <header className="topbar">
           <div className="topbar-title-group">
-            <button className="icon-button sidebar-mobile-toggle" type="button" onClick={toggleSidebar} title={collapsed ? "Abrir menu" : "Minimizar menu"}>
-              <Menu size={18} aria-hidden="true" />
-            </button>
             <h1>{title}</h1>
           </div>
           <div className="topbar-actions">
+            <a className="ghost-button compact-button topbar-web-link" href={publicWebUrl} target="_blank" rel="noreferrer">
+              <Globe size={16} aria-hidden="true" />
+              <span>Ir a web</span>
+            </a>
             <ThemeToggle />
             <LogoutButton />
           </div>

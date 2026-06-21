@@ -1,4 +1,5 @@
 import pg from "pg";
+import { getPostgresSslConfig } from "../lib/postgres-ssl.js";
 
 const tables = [
   "users",
@@ -20,7 +21,7 @@ async function main() {
 
   const client = new pg.Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL.includes("supabase.co") ? { rejectUnauthorized: false } : undefined,
+    ssl: getPostgresSslConfig(process.env.DATABASE_URL),
   });
 
   await client.connect();

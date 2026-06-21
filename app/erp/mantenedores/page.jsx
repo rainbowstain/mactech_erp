@@ -1,14 +1,15 @@
 import Link from "next/link";
 import Shell from "../Shell";
 import MaintainerTable from "./MaintainerTable";
-import { getClients, getDevices, getEquipment, getQuestions, getServices } from "@/lib/maintainers";
+import { getClients, getDevices, getEquipment, getParts, getQuestions, getServices } from "@/lib/maintainers";
 
 export const dynamic = "force-dynamic";
 
 const RESOURCE_TABS = [
   { key: "clientes", label: "Clientes" },
-  { key: "equipos", label: "Equipos" },
+  { key: "equipos", label: "Marcas" },
   { key: "dispositivos", label: "Modelos" },
+  { key: "repuestos", label: "Repuestos" },
   { key: "servicios", label: "Servicios" },
   { key: "preguntas", label: "Preguntas" },
 ];
@@ -34,8 +35,8 @@ function getResourceConfig(type, equipment = []) {
       ],
     },
     equipos: {
-      title: "Equipos",
-      addLabel: "Agregar Equipo",
+      title: "Marcas",
+      addLabel: "Agregar Marca",
       fields: [
         { key: "nombre", label: "Nombre", required: true },
         { key: "estado", label: "Estado", type: "status", defaultValue: 1 },
@@ -52,7 +53,7 @@ function getResourceConfig(type, equipment = []) {
         { key: "nombre", label: "Nombre", required: true },
         {
           key: "modelo",
-          label: "Equipo",
+          label: "Marca",
           type: "select",
           required: true,
           options: equipment.map((item) => ({ value: item.id, label: item.nombre })),
@@ -61,7 +62,19 @@ function getResourceConfig(type, equipment = []) {
       ],
       columns: [
         { key: "nombre", label: "Nombre" },
-        { key: "equipo_nombre", label: "Equipo" },
+        { key: "equipo_nombre", label: "Marca" },
+        { key: "estado", label: "Estado", type: "status", align: "center" },
+      ],
+    },
+    repuestos: {
+      title: "Tipos de reparacion",
+      addLabel: "Agregar Tipo",
+      fields: [
+        { key: "nombre", label: "Nombre", required: true },
+        { key: "estado", label: "Estado", type: "status", defaultValue: 1 },
+      ],
+      columns: [
+        { key: "nombre", label: "Nombre" },
         { key: "estado", label: "Estado", type: "status", align: "center" },
       ],
     },
@@ -100,6 +113,7 @@ function getResourceConfig(type, equipment = []) {
 async function getRows(type, search) {
   if (type === "equipos") return getEquipment({ search });
   if (type === "dispositivos") return getDevices({ search });
+  if (type === "repuestos") return getParts({ search });
   if (type === "servicios") return getServices({ search });
   if (type === "preguntas") return getQuestions({ search });
   return getClients({ search });

@@ -5,7 +5,7 @@ import WorkOrderForm from "../ordentrabajo/WorkOrderForm";
 import RevisionWorkflow from "../revision/RevisionWorkflow";
 import { formatDateTime, textOrDash } from "@/lib/format";
 import { getInventoryItems } from "@/lib/inventory";
-import { getDevices, getDeviceStates, getEquipment, getQuestions, getServices } from "@/lib/maintainers";
+import { getDevices, getDeviceStates, getEquipment, getParts, getQuestions, getServices } from "@/lib/maintainers";
 import { getClosedOrders, getOrder, getOrders, getReviewOrders } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
@@ -72,7 +72,7 @@ function ReviewSearch({ id, run, nombre, hasSearch, orders }) {
                   <th>Estado</th>
                   <th>Run</th>
                   <th>Nombre</th>
-                  <th>Equipo</th>
+                  <th>Marca</th>
                   <th>Modelo</th>
                   <th>Fecha Ingreso</th>
                 </tr>
@@ -117,13 +117,22 @@ export default async function OrdersPage({ searchParams }) {
   let content = null;
 
   if (tab === "ingreso") {
-    const [equipment, devices, states, questions] = await Promise.all([
+    const [equipment, devices, states, questions, parts] = await Promise.all([
       getEquipment(),
       getDevices(),
       getDeviceStates(),
       getQuestions(),
+      getParts(),
     ]);
-    content = <WorkOrderForm equipment={equipment} devices={devices} states={states} questions={questions} />;
+    content = (
+      <WorkOrderForm
+        equipment={equipment}
+        devices={devices}
+        states={states}
+        questions={questions}
+        parts={parts}
+      />
+    );
   }
 
   if (tab === "revision") {
@@ -134,7 +143,11 @@ export default async function OrdersPage({ searchParams }) {
     const orders = hasSearch ? await getReviewOrders({ id, run, nombre, limit: 120 }) : [];
     const selectedOrder = id && orders.length === 1 ? orders[0] : null;
     const [fullOrder, services, workshopItems] = selectedOrder
-      ? await Promise.all([getOrder(selectedOrder.id), getServices(), getInventoryItems({ area: "taller" })])
+      ? await Promise.all([
+          getOrder(selectedOrder.id),
+          getServices(),
+          getInventoryItems({ area: "taller", dispositivoId: selectedOrder.id_dispositivo }),
+        ])
       : [null, [], []];
 
     content = (
@@ -159,7 +172,7 @@ export default async function OrdersPage({ searchParams }) {
             </button>
           </form>
         </div>
-        <OrdersTable orders={orders} actionLabel="Resumen" />
+        <OrdersTable orders={orders} />
       </section>
     );
   }

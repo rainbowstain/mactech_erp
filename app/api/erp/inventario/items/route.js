@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth";
-import { createInventoryItem, getInventoryItems, makeBarcode, normalizeArea } from "@/lib/inventory";
+import { createInventoryItem, getInventoryItem, getInventoryItems, makeBarcode, normalizeArea } from "@/lib/inventory";
 
 function asText(value) {
   return String(value || "").trim();
@@ -15,6 +15,11 @@ function asInt(value, fallback = 0) {
   if (value === null || value === undefined || value === "") return fallback;
   const number = Number(value);
   return Number.isFinite(number) ? Math.round(number) : fallback;
+}
+
+function asId(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
 }
 
 function asDiscount(value) {
@@ -36,8 +41,11 @@ function cleanPayload(body) {
     cantidad: asInt(body.cantidad, 0),
     stock_minimo: asInt(body.stock_minimo, 0),
     ubicacion: asNullableText(body.ubicacion),
+    proveedor: asNullableText(body.proveedor),
     notas: asNullableText(body.notas),
     estado: asInt(body.estado, 1) ? 1 : 0,
+    dispositivo_id: area === "taller" ? asId(body.dispositivo_id) : null,
+    repuesto_id: area === "taller" ? asId(body.repuesto_id) : null,
   };
 }
 
@@ -48,13 +56,21 @@ export async function GET(request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const items = await getInventoryItems({
+  const result = await getInventoryItems({
     area: searchParams.get("area") || "productos",
     search: searchParams.get("q") || "",
     barcode: searchParams.get("barcode") || "",
+    equipoId: searchParams.get("equipoId"),
+    dispositivoId: searchParams.get("dispositivoId"),
+    repuestoId: searchParams.get("repuestoId"),
+    proveedor: searchParams.get("proveedor") || "",
+    estado: searchParams.get("estado"),
+    page: searchParams.get("page") || 1,
+    pageSize: searchParams.get("pageSize") || 50,
+    paginate: true,
   });
 
-  return NextResponse.json({ items });
+  return NextResponse.json(result);
 }
 
 export async function POST(request) {
@@ -71,7 +87,7 @@ export async function POST(request) {
 
   try {
     const item = await createInventoryItem(payload);
-    return NextResponse.json(item);
+    return NextResponse.json((await getInventoryItem(item.id)) || item);
   } catch (error) {
     if (error?.code === "23505") {
       return NextResponse.json({ message: "El codigo de barra ya existe." }, { status: 409 });

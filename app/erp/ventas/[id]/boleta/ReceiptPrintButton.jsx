@@ -6,7 +6,21 @@ import { Printer } from "lucide-react";
 export default function ReceiptPrintButton({ auto = false, label = "Imprimir boleta" }) {
   useEffect(() => {
     if (!auto) return undefined;
-    const timer = window.setTimeout(() => window.print(), 450);
+    const timer = window.setTimeout(async () => {
+      await document.fonts?.ready;
+      await Promise.all(
+        Array.from(document.images)
+          .filter((image) => !image.complete)
+          .map(
+            (image) =>
+              new Promise((resolve) => {
+                image.addEventListener("load", resolve, { once: true });
+                image.addEventListener("error", resolve, { once: true });
+              })
+          )
+      );
+      window.print();
+    }, 450);
     return () => window.clearTimeout(timer);
   }, [auto]);
 

@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 import pg from "pg";
+import { getPostgresSslConfig } from "../lib/postgres-ssl.js";
+import { BRAND_MODELS, PART_TYPES } from "../lib/seed-data.js";
 
 const { Client } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,8 +24,6 @@ const DEVICE_STATES = [
   [2, "Apagado"],
   [3, "Bloqueado"],
 ];
-
-const EQUIPMENT = ["iPhone", "Macbook", "iPad", "iMac", "Apple TV", "Android", "Tablet", "Notebook", "Parlante", "Audifonos"];
 
 const SERVICES = [
   ["Mantenimiento", 19990],
@@ -85,7 +85,7 @@ async function main() {
 
   const client = new Client({
     connectionString: databaseUrl,
-    ssl: databaseUrl.includes("supabase.co") ? { rejectUnauthorized: false } : undefined,
+    ssl: getPostgresSslConfig(databaseUrl),
   });
 
   await client.connect();
@@ -97,14 +97,16 @@ async function main() {
     await seedFixedId(client, "estados_ordenes", ["id", "nombre_estado"], ORDER_STATES);
     await seedFixedId(client, "estado_equipos", ["id", "nombre"], DEVICE_STATES);
 
-    const equipmentIds = [];
-    for (const name of EQUIPMENT) {
-      const result = await client.query("insert into equipos (nombre, estado) values ($1, 1) returning id", [name]);
-      equipmentIds.push(result.rows[0].id);
+    for (const [brand, models] of Object.entries(BRAND_MODELS)) {
+      const brandResult = await client.query("insert into equipos (nombre, estado) values ($1, 1) returning id", [brand]);
+      const brandId = brandResult.rows[0].id;
+      for (const model of models) {
+        await client.query("insert into dispositivos (nombre, modelo, estado) values ($1, $2, 1)", [model, brandId]);
+      }
     }
 
-    for (const equipmentId of equipmentIds) {
-      await client.query("insert into dispositivos (nombre, modelo, estado) values ('General', $1, 1)", [equipmentId]);
+    for (const name of PART_TYPES) {
+      await client.query("insert into repuestos (nombre, estado) values ($1, 1)", [name]);
     }
 
     for (const [name, price] of SERVICES) {

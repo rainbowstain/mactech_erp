@@ -55,3 +55,17 @@ export async function DELETE(request) {
   if (!result.rows[0]) return NextResponse.json({ message: "Tramo no encontrado." }, { status: 404 });
   return NextResponse.json(result.rows[0]);
 }
+
+export async function PATCH(request) {
+  const session = await readSession();
+  if (!session) return NextResponse.json({ message: "No autorizado." }, { status: 401 });
+
+  const body = await request.json().catch(() => ({}));
+  const id = asId(body.id);
+  if (!id) return NextResponse.json({ message: "ID invalido." }, { status: 400 });
+
+  const estado = asInt(body.estado, 1) ? 1 : 0;
+  const result = await query("update finanzas_tramos set estado = $1 where id = $2 returning *", [estado, id]);
+  if (!result.rows[0]) return NextResponse.json({ message: "Tramo no encontrado." }, { status: 404 });
+  return NextResponse.json(result.rows[0]);
+}

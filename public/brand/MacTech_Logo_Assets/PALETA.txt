@@ -1,0 +1,18 @@
+MACTECH · PALETA TURQUESA (edición 2026)
+
+Turquesa principal   #0F9B8E   rgb(15,155,142)    cmyk(81,0,48,0)
+Turquesa acento      #41C9A2   rgb(65,201,162)    cmyk(65,0,48,0)
+Slate (oscuro)       #1E2A32   rgb(30,42,50)      cmyk(75,55,45,55)
+Lila apoyo           #8075FF   rgb(128,117,255)   cmyk(66,58,0,0)
+Verde apoyo          #3A5B51   rgb(58,91,81)      cmyk(75,42,60,38)
+Blanco               #FFFFFF   rgb(255,255,255)
+
+USO RAPIDO
+- Fondo oscuro  -> usar logo *_blanco
+- Fondo claro   -> usar logo *_turquesa o *_slate
+- Acento (#41C9A2) solo para detalles/CTA, nunca como color base del logo.
+
+ARCHIVOS (PNG con transparencia, alta resolucion)
+- mactech_imagotipo_*  : isotipo + wordmark (aplicacion primaria)
+- mactech_wordmark_*   : solo texto "MacTech"
+- mactech_isotipo_*    : solo simbolo (pantallas)

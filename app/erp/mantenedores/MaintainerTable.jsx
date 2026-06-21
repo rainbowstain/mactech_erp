@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Edit3, Plus, Save, Trash2, X } from "lucide-react";
+import { Edit3, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { formatMoney, textOrDash } from "@/lib/format";
+import DataTable from "../DataTable";
 
 function formatValue(value, type) {
   if (type === "money") return formatMoney(value);
@@ -20,12 +21,15 @@ function emptyValues(fields) {
 
 export default function MaintainerTable({ title, rows, columns, fields, resource, search, addLabel = "Agregar" }) {
   const router = useRouter();
+  const formRef = useRef(null);
   const [editing, setEditing] = useState(null);
   const [values, setValues] = useState(() => emptyValues(fields));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const isEditing = Boolean(editing);
   const formTitle = isEditing ? `Editar ${title}` : addLabel;
+  const activeRows = rows.filter((row) => Number(row.estado) !== 0).length;
+  const inactiveRows = rows.length - activeRows;
 
   const selectedLabelMaps = useMemo(() => {
     const maps = {};
@@ -40,6 +44,7 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
     setEditing(null);
     setValues(emptyValues(fields));
     setMessage("");
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function openEdit(row) {
@@ -50,6 +55,7 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
     setEditing(row);
     setValues(nextValues);
     setMessage("");
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function closeForm() {
@@ -91,18 +97,21 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
     }
   }
 
-  async function disableRecord(row) {
+  async function toggleRecord(row) {
+    const nextEstado = Number(row.estado) === 1 ? 0 : 1;
     setSaving(true);
     setMessage("");
 
     try {
       const response = await fetch(`/api/erp/mantenedores/${resource}/${row.id}`, {
-        method: "DELETE",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estado: nextEstado }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "No se pudo deshabilitar.");
+      if (!response.ok) throw new Error(payload.message || "No se pudo actualizar el estado.");
 
-      setMessage("Registro deshabilitado.");
+      setMessage(nextEstado ? "Registro reactivado." : "Registro deshabilitado.");
       router.refresh();
     } catch (error) {
       setMessage(error.message);
@@ -168,7 +177,7 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
         <h2>{title}</h2>
         <form className="search-form">
           <input type="hidden" name="tipo" value={resource} />
-          <input name="q" defaultValue={search} placeholder="Search..." />
+          <input name="q" defaultValue={search} placeholder="Buscar..." />
           <button className="ghost-button compact-button" type="submit">
             Buscar
           </button>
@@ -179,7 +188,7 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
         </form>
       </div>
 
-      <form className="maintainer-form" onSubmit={saveRecord}>
+      <form className="maintainer-form" onSubmit={saveRecord} ref={formRef}>
         <div className="maintainer-form-heading">
           <strong>{formTitle}</strong>
           {isEditing ? <span>#{editing.id}</span> : null}
@@ -208,65 +217,77 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
         </div>
       </form>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th className="text-center">N</th>
-              {columns.map((column) => (
-                <th key={column.key} className={column.align === "center" ? "text-center" : undefined}>
-                  {column.label}
-                </th>
-              ))}
-              <th className="text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length ? (
-              rows.map((row, index) => (
-                <tr key={row.id}>
-                  <td className="text-center">{index + 1}</td>
-                  {columns.map((column) => (
-                    <td key={column.key} className={column.align === "center" ? "text-center" : undefined}>
-                      {column.type === "status" ? (
-                        <span className={`pill ${Number(row[column.key]) === 1 ? "green" : "gray"}`}>
-                          {formatValue(row[column.key], column.type)}
-                        </span>
-                      ) : column.type === "select" ? (
-                        selectedLabelMaps[column.key]?.get(String(row[column.key])) || textOrDash(row[column.key])
-                      ) : (
-                        formatValue(row[column.key], column.type)
-                      )}
-                    </td>
-                  ))}
-                  <td className="text-center">
-                    <div className="action-group">
-                      <button className="action-button" type="button" title="Editar" onClick={() => openEdit(row)}>
-                        <Edit3 size={15} aria-hidden="true" />
-                      </button>
-                      <button
-                        className="action-button danger"
-                        type="button"
-                        title="Deshabilitar"
-                        disabled={saving || Number(row.estado) === 0}
-                        onClick={() => disableRecord(row)}
-                      >
-                        <Trash2 size={15} aria-hidden="true" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td className="empty-state" colSpan={columns.length + 2}>
-                  Sin registros para mostrar.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="maintainer-summary-grid">
+        <div><span>Total</span><strong>{rows.length}</strong></div>
+        <div><span>Activos</span><strong>{activeRows}</strong></div>
+        <div><span>Inactivos</span><strong>{inactiveRows}</strong></div>
       </div>
+
+      <DataTable
+        rows={rows}
+        emptyMessage="Sin registros para mostrar."
+        columns={[
+          { key: "number", label: "N", align: "center", filter: false, value: (row) => rows.indexOf(row) + 1 },
+          ...columns.map((column) => ({
+            ...column,
+            value: (row) =>
+              column.type === "select"
+                ? selectedLabelMaps[column.key]?.get(String(row[column.key])) || row[column.key]
+                : formatValue(row[column.key], column.type),
+            filterOptions:
+              column.type === "status"
+                ? [
+                    { value: "Habilitado", label: "Habilitado" },
+                    { value: "Deshabilitado", label: "Deshabilitado" },
+                  ]
+                : undefined,
+            render: (row) =>
+              column.type === "status" ? (
+                <span className={`pill ${Number(row[column.key]) === 1 ? "green" : "gray"}`}>
+                  {formatValue(row[column.key], column.type)}
+                </span>
+              ) : column.type === "select" ? (
+                selectedLabelMaps[column.key]?.get(String(row[column.key])) || textOrDash(row[column.key])
+              ) : (
+                formatValue(row[column.key], column.type)
+              ),
+          })),
+          {
+            key: "actions",
+            label: "Acciones",
+            align: "center",
+            filter: false,
+            render: (row) => (
+              <div className="action-group">
+                <button className="action-button" type="button" title="Editar" onClick={() => openEdit(row)}>
+                  <Edit3 size={15} aria-hidden="true" />
+                </button>
+                {Number(row.estado) === 1 ? (
+                <button
+                  className="action-button danger"
+                  type="button"
+                  title="Deshabilitar"
+                  disabled={saving}
+                  onClick={() => toggleRecord(row)}
+                >
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
+                ) : (
+                  <button
+                    className="action-button"
+                    type="button"
+                    title="Reactivar"
+                    disabled={saving}
+                    onClick={() => toggleRecord(row)}
+                  >
+                    <RotateCcw size={15} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            ),
+          },
+        ]}
+      />
     </section>
   );
 }

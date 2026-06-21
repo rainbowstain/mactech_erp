@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 import mysql from "mysql2/promise";
 import pg from "pg";
+import { getPostgresSslConfig } from "../lib/postgres-ssl.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -139,7 +140,7 @@ async function main() {
   const schema = await fs.readFile(schemaPath, "utf8");
   const pgClient = new pg.Client({
     connectionString: requiredEnv("DATABASE_URL"),
-    ssl: process.env.DATABASE_URL?.includes("supabase.co") ? { rejectUnauthorized: false } : undefined,
+    ssl: getPostgresSslConfig(process.env.DATABASE_URL),
   });
   const mysqlConnection = await mysql.createConnection({
     host: requiredEnv("MYSQL_HOST", "127.0.0.1"),

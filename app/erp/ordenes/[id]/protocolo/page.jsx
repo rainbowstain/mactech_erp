@@ -25,8 +25,16 @@ export default async function OrderProtocolPage({ params }) {
 
   if (!order) notFound();
 
+  const quotedRepairs = Array.from(new Set((order.repuestos || []).map((part) => part.producto).filter(Boolean)));
+  const protocolDescription =
+    quotedRepairs.join(" / ") || order.reparacion_nombre || order.observacion || "Diagnostico";
+  const protocolTotal =
+    order.repuestos?.reduce((sum, part) => sum + Number(part.total_venta || 0), 0) ||
+    Number(order.total || 0) ||
+    Number(order.total_recepcion || 0);
+
   return (
-    <main className="print-page">
+    <main className="print-page protocol-print-page">
       <div className="print-actions no-print">
         <Link className="ghost-button compact-button" href={`/erp/ordenes/${order.id}`}>
           Volver
@@ -56,7 +64,7 @@ export default async function OrderProtocolPage({ params }) {
           <div className="legacy-print-grid cols-4">
             <div>
               <PrintField label="Nombre" value={order.cliente_nombre} />
-              <PrintField label="Equipo" value={order.equipo_nombre} />
+              <PrintField label="Marca" value={order.equipo_nombre} />
             </div>
             <div>
               <PrintField label="Rut" value={order.cliente_run} />
@@ -92,12 +100,15 @@ export default async function OrderProtocolPage({ params }) {
         </section>
 
         <section className="legacy-protocol-observation">
-          <div className="legacy-observation-box">{textOrDash(order.observacion)}</div>
+          <div className="legacy-observation-box">
+            <strong>{textOrDash(protocolDescription)}</strong>
+            {order.observacion ? <p>{textOrDash(order.observacion)}</p> : null}
+          </div>
           <div className="legacy-signature-box">
             <p>Firma</p>
           </div>
           <div className="legacy-value-box">
-            <h2>{formatMoney(order.total_recepcion)}</h2>
+            <h2>{formatMoney(protocolTotal)}</h2>
           </div>
         </section>
 

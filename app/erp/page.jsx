@@ -82,7 +82,7 @@ export default async function DashboardPage({ searchParams }) {
 
       <section className="panel">
         <div className="panel-header legacy-recent-header">
-          <h2>Recent Orders</h2>
+          <h2>Ordenes recientes</h2>
           <div className="legacy-dashboard-tools">
             <Link className="ghost-button compact-button" href="/erp/ordenes?tab=revision">
               Buscar
@@ -110,9 +110,8 @@ export default async function DashboardPage({ searchParams }) {
                 <tr key={order.id}>
                   <td>
                     <Link className="table-link" href={`/erp/ordenes?tab=revision&idOrden=${order.id}`}>
-                      ORDEN
+                      #{order.id}
                     </Link>
-                    <span className="subtext">{order.id}</span>
                   </td>
                   <td>
                     <strong>{textOrDash(order.cliente_nombre)}</strong>

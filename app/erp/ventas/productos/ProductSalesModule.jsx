@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Barcode, Minus, Plus, Printer, Save, Search, ShoppingCart, Trash2 } from "lucide-react";
-import { formatMoney, textOrDash } from "@/lib/format";
+import { formatDateTime, formatMoney, textOrDash } from "@/lib/format";
 
 const PAYMENT_METHODS = ["EFECTIVO", "TRANSFERENCIA", "DEBITO", "CREDITO", "REDBANK", "OTRO"];
 
@@ -305,7 +305,7 @@ export default function ProductSalesModule({ initialItems, recentSales }) {
             <tbody>
               {recentSales.map((sale) => (
                 <tr key={sale.id}>
-                  <td>{new Date(sale.fecha).toLocaleString("es-CL")}</td>
+                  <td>{formatDateTime(sale.fecha)}</td>
                   <td>{sale.tipo}</td>
                   <td>{textOrDash(sale.metodo_pago)}</td>
                   <td>{formatMoney(sale.total_bruto)}</td>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth";
-import { canManageUsers, disableUser, updateUser } from "@/lib/users";
+import { canManageUsers, disableUser, setUserStatus, updateUser } from "@/lib/users";
 
 function asId(value) {
   const id = Number(value);
@@ -44,5 +44,23 @@ export async function DELETE(_request, { params }) {
   } catch (error) {
     const status = error.message === "Usuario no encontrado." ? 404 : 400;
     return NextResponse.json({ message: error.message || "No se pudo deshabilitar usuario." }, { status });
+  }
+}
+
+export async function PATCH(request, { params }) {
+  const session = await readSession();
+  if (!session) return NextResponse.json({ message: "No autorizado." }, { status: 401 });
+  if (!canManageUsers(session)) return NextResponse.json({ message: "Sin permiso para administrar usuarios." }, { status: 403 });
+
+  const id = await getId(params);
+  if (!id) return NextResponse.json({ message: "ID invalido." }, { status: 400 });
+
+  const body = await request.json().catch(() => ({}));
+  try {
+    const user = await setUserStatus(id, Boolean(body.estado));
+    return NextResponse.json(user);
+  } catch (error) {
+    const status = error.message === "Usuario no encontrado." ? 404 : 400;
+    return NextResponse.json({ message: error.message || "No se pudo actualizar usuario." }, { status });
   }
 }

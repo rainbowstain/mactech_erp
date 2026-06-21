@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth";
-import { disableInventoryItem, updateInventoryItem } from "@/lib/inventory";
+import { disableInventoryItem, getInventoryItem, setInventoryItemStatus, updateInventoryItem } from "@/lib/inventory";
 
 function asText(value) {
   return String(value || "").trim();
@@ -39,8 +39,11 @@ function cleanPayload(body) {
     cantidad: asInt(body.cantidad, 0),
     stock_minimo: asInt(body.stock_minimo, 0),
     ubicacion: asNullableText(body.ubicacion),
+    proveedor: asNullableText(body.proveedor),
     notas: asNullableText(body.notas),
     estado: asInt(body.estado, 1) ? 1 : 0,
+    dispositivo_id: asId(body.dispositivo_id),
+    repuesto_id: asId(body.repuesto_id),
   };
 }
 
@@ -63,7 +66,7 @@ export async function PUT(request, { params }) {
   try {
     const item = await updateInventoryItem(id, payload);
     if (!item) return NextResponse.json({ message: "Producto no encontrado." }, { status: 404 });
-    return NextResponse.json(item);
+    return NextResponse.json((await getInventoryItem(item.id)) || item);
   } catch (error) {
     if (error?.code === "23505") {
       return NextResponse.json({ message: "El codigo de barra ya existe." }, { status: 409 });
@@ -84,5 +87,21 @@ export async function DELETE(_request, { params }) {
 
   const item = await disableInventoryItem(id);
   if (!item) return NextResponse.json({ message: "Producto no encontrado." }, { status: 404 });
-  return NextResponse.json(item);
+  return NextResponse.json((await getInventoryItem(item.id)) || item);
+}
+
+export async function PATCH(request, { params }) {
+  const session = await readSession();
+  if (!session) {
+    return NextResponse.json({ message: "No autorizado." }, { status: 401 });
+  }
+
+  const { id: rawId } = await params;
+  const id = asId(rawId);
+  if (!id) return NextResponse.json({ message: "ID invalido." }, { status: 400 });
+
+  const body = await request.json().catch(() => ({}));
+  const item = await setInventoryItemStatus(id, asInt(body.estado, 1) ? 1 : 0);
+  if (!item) return NextResponse.json({ message: "Producto no encontrado." }, { status: 404 });
+  return NextResponse.json((await getInventoryItem(item.id)) || item);
 }
