@@ -2309,3 +2309,216 @@ html:has(.site) {
     display: none;
   }
 }
+
+/* ===== Términos y condiciones (página pública /terminos) ===== */
+.legal {
+  position: relative;
+  min-height: 100svh;
+  padding: clamp(20px, 4vw, 40px) clamp(16px, 5vw, 40px) clamp(60px, 10vh, 110px);
+  background: var(--st-bg);
+  color: var(--st-text);
+  overflow: hidden;
+}
+
+.legal-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 80% -5%, rgba(124, 77, 255, 0.16), transparent 70%),
+    radial-gradient(50% 40% at 10% 0%, rgba(31, 21, 86, 0.45), transparent 72%);
+}
+
+.legal-top {
+  position: relative;
+  z-index: 1;
+  max-width: 860px;
+  margin: 0 auto clamp(22px, 4vw, 40px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.legal-home img {
+  height: 30px;
+  width: auto;
+  display: block;
+}
+
+.legal-back {
+  color: var(--st-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  transition: color 0.16s ease;
+}
+
+.legal-back:hover {
+  color: #fff;
+}
+
+.legal-sheet {
+  position: relative;
+  z-index: 1;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.legal-title {
+  margin: 6px 0 0;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.legal-meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: clamp(22px, 4vw, 34px) 0;
+}
+
+.legal-meta-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--st-line-2);
+  border-radius: 16px;
+  background:
+    linear-gradient(160deg, rgba(124, 77, 255, 0.06), rgba(255, 255, 255, 0.012)),
+    rgba(14, 13, 19, 0.7);
+}
+
+.legal-meta-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--st-brand-soft);
+}
+
+.legal-meta-value {
+  font-size: 0.96rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.legal-intro p,
+.legal-section p {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 1rem;
+  line-height: 1.7;
+  margin: 0 0 14px;
+}
+
+.legal-section {
+  margin-top: clamp(28px, 5vw, 42px);
+}
+
+.legal-section h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 14px;
+  font-size: clamp(1.15rem, 2.6vw, 1.5rem);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.legal-num {
+  font-family: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Roboto Mono", Menlo, monospace;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--st-brand-soft);
+}
+
+.legal-list {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.legal-list li {
+  position: relative;
+  padding-left: 20px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.legal-list li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.7em;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--st-brand);
+}
+
+.legal-table-wrap {
+  overflow-x: auto;
+  margin: 6px 0 16px;
+}
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  border: 1px solid var(--st-line-2);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.legal-table th {
+  text-align: left;
+  padding: 12px 14px;
+  background: rgba(124, 77, 255, 0.14);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--st-line-2);
+}
+
+.legal-table td {
+  padding: 12px 14px;
+  vertical-align: top;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.5;
+  border-bottom: 1px solid var(--st-line);
+}
+
+.legal-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.legal-table td:first-child {
+  font-weight: 600;
+  color: #fff;
+}
+
+.legal-foot {
+  margin-top: clamp(36px, 6vw, 56px);
+  padding-top: 20px;
+  border-top: 1px solid var(--st-line);
+  text-align: center;
+  color: var(--st-faint);
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+@media (min-width: 720px) {
+  .legal-meta {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

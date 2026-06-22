@@ -211,7 +211,7 @@ export async function POST(request) {
         `,
         [
           asTimestamp(orderPayload.fecha_entrega),
-          session.name || session.email,
+          asNullableText(orderPayload.tecnico) || session.name || session.email,
           clientId,
           asNullableText(orderPayload.imei),
           asNullableText(orderPayload.codigo),

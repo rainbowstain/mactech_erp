@@ -7,6 +7,8 @@ import { formatDateTime, textOrDash } from "@/lib/format";
 import { getInventoryItems } from "@/lib/inventory";
 import { getDevices, getDeviceStates, getEquipment, getParts, getQuestions, getServices } from "@/lib/maintainers";
 import { getClosedOrders, getOrder, getOrders, getReviewOrders } from "@/lib/orders";
+import { getUsers } from "@/lib/users";
+import { readSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -117,12 +119,14 @@ export default async function OrdersPage({ searchParams }) {
   let content = null;
 
   if (tab === "ingreso") {
-    const [equipment, devices, states, questions, parts] = await Promise.all([
+    const [equipment, devices, states, questions, parts, users, session] = await Promise.all([
       getEquipment(),
       getDevices(),
       getDeviceStates(),
       getQuestions(),
       getParts(),
+      getUsers(),
+      readSession(),
     ]);
     content = (
       <WorkOrderForm
@@ -131,6 +135,8 @@ export default async function OrdersPage({ searchParams }) {
         states={states}
         questions={questions}
         parts={parts}
+        users={users}
+        currentUserName={session?.name || session?.email || ""}
       />
     );
   }

@@ -290,6 +290,25 @@ button:disabled {
   overflow: hidden;
 }
 
+.sidebar-version {
+  margin-top: auto;
+  padding: 12px 10px 2px;
+  font-family: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Roboto Mono", Menlo, monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.34);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-collapsed .sidebar-version {
+  text-align: center;
+  font-size: 0.55rem;
+  padding: 12px 2px 2px;
+}
+
 .sidebar-logo {
   display: flex;
   align-items: center;
@@ -2130,6 +2149,113 @@ tr:hover td {
 
 .legacy-input-addon {
   grid-template-columns: auto minmax(0, 1fr);
+}
+
+/* Buscador de modelo (combobox) */
+.model-combo {
+  position: relative;
+  min-width: 0;
+}
+
+.model-combo-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 244px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.model-combo-list li {
+  margin: 0;
+}
+
+.model-combo-list li button {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.model-combo-list li button:hover,
+.model-combo-list li button.is-active {
+  background: color-mix(in srgb, var(--brand) 16%, transparent);
+}
+
+.model-combo-empty {
+  padding: 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* Modal: agregar marca / modelo */
+.wo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 8, 12, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.wo-modal {
+  width: min(380px, 100%);
+  padding: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.4);
+}
+
+.wo-modal h3 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.wo-modal-sub {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.wo-modal input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.wo-modal-error {
+  margin: 8px 0 0;
+  color: #e54848;
+  font-size: 0.82rem;
+}
+
+.wo-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
 }
 
 .legacy-input-addon span {

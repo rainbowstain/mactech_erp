@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import LogoutButton from "./LogoutButton";
 import ThemeToggle from "./ThemeToggle";
+import { APP_VERSION_LABEL } from "@/lib/version";
 
 const publicWebUrl = process.env.NEXT_PUBLIC_WEB_URL || "/";
 
@@ -150,6 +151,7 @@ export default function ErpFrame({ active, title, session, children }) {
             />
           ))}
         </nav>
+        <div className="sidebar-version" title="Versión del sistema">{APP_VERSION_LABEL}</div>
       </aside>
       <main className="main">
         <header className="topbar">

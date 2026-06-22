@@ -47,6 +47,7 @@ import RepairsScroller from "./RepairsScroller";
 import ProcessRoute from "./ProcessRoute";
 import CommandCenter from "./CommandCenter";
 import ContactFinale from "./ContactFinale";
+import { APP_VERSION } from "@/lib/version";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -314,7 +315,7 @@ export default function Landing() {
             <LogIn size={12} aria-hidden="true" />
             Acceso interno
           </a>
-          <span className="foot-version">v1.0.0</span>
+          <span className="foot-version">v{APP_VERSION}</span>
         </div>
         </footer>
       </div>

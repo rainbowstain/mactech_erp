@@ -32,9 +32,17 @@ function Field({ label, required, children }) {
   );
 }
 
-export default function WorkOrderForm({ equipment, devices, states, questions, parts = [], workshopItems = [] }) {
+export default function WorkOrderForm({ equipment, devices, states, questions, parts = [], workshopItems = [], users = [], currentUserName = "" }) {
   const router = useRouter();
+  const [equipmentList, setEquipmentList] = useState(equipment);
+  const [deviceList, setDeviceList] = useState(devices);
   const [deviceItems, setDeviceItems] = useState(workshopItems);
+  const [modelQuery, setModelQuery] = useState("");
+  const [modelOpen, setModelOpen] = useState(false);
+  const [modal, setModal] = useState(null); // null | "marca" | "modelo"
+  const [modalName, setModalName] = useState("");
+  const [modalSaving, setModalSaving] = useState(false);
+  const [modalError, setModalError] = useState("");
   const [status, setStatus] = useState("");
   const [loadingClient, setLoadingClient] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -61,12 +69,25 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
     imei: "",
     total_recepcion: "0",
     observacion: "",
+    tecnico: currentUserName,
   });
 
+  const activeUsers = useMemo(
+    () => users.filter((user) => user.estado).map((user) => user.name || user.email),
+    [users]
+  );
+
   const filteredDevices = useMemo(() => {
-    if (!order.id_equipo) return devices;
-    return devices.filter((device) => String(device.modelo) === String(order.id_equipo));
-  }, [devices, order.id_equipo]);
+    if (!order.id_equipo) return deviceList;
+    return deviceList.filter((device) => String(device.modelo) === String(order.id_equipo));
+  }, [deviceList, order.id_equipo]);
+
+  // Modelos que coinciden con el buscador (filtra por nombre: iPhone, MacBook, iMac…).
+  const modelMatches = useMemo(() => {
+    const query = modelQuery.trim().toLowerCase();
+    if (!query) return filteredDevices.slice(0, 60);
+    return filteredDevices.filter((device) => (device.nombre || "").toLowerCase().includes(query)).slice(0, 60);
+  }, [filteredDevices, modelQuery]);
 
   const visibleQuestions = useMemo(() => {
     if (!order.estado_dispositivo) return [];
@@ -195,6 +216,63 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
     });
   }
 
+  function selectModel(device) {
+    updateOrder("id_dispositivo", String(device.id));
+    setModelQuery(device.nombre || "");
+    setModelOpen(false);
+  }
+
+  function openAddModal(type) {
+    if (type === "modelo" && !order.id_equipo) {
+      setStatus("Selecciona una marca antes de agregar un modelo.");
+      return;
+    }
+    setModal(type);
+    setModalName("");
+    setModalError("");
+  }
+
+  async function saveModal() {
+    const name = modalName.trim();
+    if (!name) {
+      setModalError("Ingresa un nombre.");
+      return;
+    }
+    setModalSaving(true);
+    setModalError("");
+    try {
+      if (modal === "marca") {
+        const response = await fetch("/api/erp/mantenedores/equipos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: name, estado: 1 }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || "No se pudo crear la marca.");
+        setEquipmentList((current) =>
+          [...current, data].sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""))
+        );
+        updateOrder("id_equipo", String(data.id));
+        setModelQuery("");
+      } else {
+        const response = await fetch("/api/erp/mantenedores/dispositivos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: name, modelo: order.id_equipo, estado: 1 }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || "No se pudo crear el modelo.");
+        setDeviceList((current) => [...current, data]);
+        selectModel(data);
+      }
+      setModal(null);
+    } catch (error) {
+      setModalError(error.message || "No se pudo guardar.");
+    } finally {
+      setModalSaving(false);
+    }
+  }
+
   function updateRepair(index, field, value) {
     setOrder((current) => {
       const reparaciones = current.reparaciones.map((repair, repairIndex) => {
@@ -203,7 +281,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
           const selectedPart = parts.find((part) => String(part.id) === String(value));
           let precio_unitario = "";
           if (isDiagnostico(selectedPart?.nombre)) {
-            const device = devices.find((item) => String(item.id) === String(current.id_dispositivo));
+            const device = deviceList.find((item) => String(item.id) === String(current.id_dispositivo));
             precio_unitario = String(diagnosticoPrice(device?.nombre));
           }
           return { ...repair, reparacion_id: value, inventario_item_id: "", precio_unitario };
@@ -364,32 +442,80 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
             <div className="legacy-form-grid legacy-form-grid-three">
               <Field label="Marca" required>
                 <div className="legacy-input-button compact">
-                  <select value={order.id_equipo} onChange={(event) => updateOrder("id_equipo", event.target.value)} required>
+                  <select
+                    value={order.id_equipo}
+                    onChange={(event) => {
+                      updateOrder("id_equipo", event.target.value);
+                      setModelQuery("");
+                      setModelOpen(false);
+                    }}
+                    required
+                  >
                     <option value="">Seleccionar...</option>
-                    {equipment.map((item) => (
+                    {equipmentList.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.nombre}
                       </option>
                     ))}
                   </select>
-                  <button type="button" className="legacy-plus">+</button>
+                  <button type="button" className="legacy-plus" onClick={() => openAddModal("marca")} title="Agregar marca">+</button>
                 </div>
               </Field>
               <Field label="Modelo" required>
                 <div className="legacy-input-button compact">
-                  <select
-                    value={order.id_dispositivo}
-                    onChange={(event) => updateOrder("id_dispositivo", event.target.value)}
-                    required
+                  <div className="model-combo">
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      placeholder={order.id_equipo ? "Buscar modelo (iPhone, MacBook, iMac…)" : "Selecciona marca primero"}
+                      value={modelQuery}
+                      disabled={!order.id_equipo}
+                      onChange={(event) => {
+                        setModelQuery(event.target.value);
+                        setModelOpen(true);
+                        if (order.id_dispositivo) updateOrder("id_dispositivo", "");
+                      }}
+                      onFocus={() => setModelOpen(true)}
+                      onBlur={() => setTimeout(() => setModelOpen(false), 150)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          if (modelMatches[0]) selectModel(modelMatches[0]);
+                        }
+                        if (event.key === "Escape") setModelOpen(false);
+                      }}
+                    />
+                    {modelOpen && order.id_equipo ? (
+                      <ul className="model-combo-list">
+                        {modelMatches.map((device) => (
+                          <li key={device.id}>
+                            <button
+                              type="button"
+                              className={String(device.id) === String(order.id_dispositivo) ? "is-active" : ""}
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                selectModel(device);
+                              }}
+                            >
+                              {device.nombre}
+                            </button>
+                          </li>
+                        ))}
+                        {!modelMatches.length ? (
+                          <li className="model-combo-empty">Sin resultados · usa “+” para agregar</li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    className="legacy-plus"
+                    onClick={() => openAddModal("modelo")}
+                    disabled={!order.id_equipo}
+                    title="Agregar modelo"
                   >
-                    <option value="">Seleccionar...</option>
-                    {filteredDevices.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="button" className="legacy-plus">+</button>
+                    +
+                  </button>
                 </div>
               </Field>
               <Field label="Codigo">
@@ -484,6 +610,23 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
                   onChange={(event) => updateOrder("fecha_entrega", event.target.value)}
                 />
               </Field>
+              <Field label="Tecnico que recibe" required>
+                <select
+                  value={order.tecnico}
+                  onChange={(event) => updateOrder("tecnico", event.target.value)}
+                  required
+                >
+                  {!order.tecnico ? <option value="">Seleccionar...</option> : null}
+                  {order.tecnico && !activeUsers.includes(order.tecnico) ? (
+                    <option value={order.tecnico}>{order.tecnico}</option>
+                  ) : null}
+                  {activeUsers.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
             </div>
           </>
         ) : null}
@@ -541,6 +684,40 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
             </button>
           </div>
         </article>
+      ) : null}
+
+      {modal ? (
+        <div className="wo-modal-overlay" onMouseDown={() => !modalSaving && setModal(null)}>
+          <div className="wo-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <h3>{modal === "marca" ? "Agregar marca" : "Agregar modelo"}</h3>
+            {modal === "modelo" ? (
+              <p className="wo-modal-sub">
+                Para {equipmentList.find((m) => String(m.id) === String(order.id_equipo))?.nombre || "la marca"}
+              </p>
+            ) : null}
+            <input
+              autoFocus
+              placeholder={modal === "marca" ? "Nombre de la marca" : "Nombre del modelo"}
+              value={modalName}
+              onChange={(event) => setModalName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  saveModal();
+                }
+              }}
+            />
+            {modalError ? <p className="wo-modal-error">{modalError}</p> : null}
+            <div className="wo-modal-actions">
+              <button type="button" className="ghost-button compact-button" onClick={() => setModal(null)} disabled={modalSaving}>
+                Cancelar
+              </button>
+              <button type="button" className="primary-button compact-button" onClick={saveModal} disabled={modalSaving}>
+                {modalSaving ? "Guardando..." : "Agregar"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </form>
   );
