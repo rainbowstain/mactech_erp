@@ -2545,14 +2545,14 @@ tr:hover td {
   display: grid;
   grid-template-columns: 25% 1fr 25%;
   gap: 18px;
-  align-items: start;
+  align-items: center;
 }
 
 .legacy-print-logo img {
   display: block;
-  width: 84%;
-  max-width: 190px;
-  margin-top: 18px;
+  width: 92%;
+  max-width: 210px;
+  margin-top: 0;
 }
 
 .legacy-print-company h5 {
@@ -2560,6 +2560,33 @@ tr:hover td {
   font-size: 12px;
   font-weight: 700;
   line-height: 1.25;
+}
+
+.legacy-print-socials {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.legacy-print-socials svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Campos de la OT: etiqueta arriba-izquierda y círculos del mismo tamaño/alineados. */
+.legacy-protocol-sheet .legacy-print-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+}
+
+.legacy-protocol-sheet .legacy-print-field p {
+  text-align: left;
+}
+
+.legacy-protocol-sheet .legacy-print-field div {
+  width: 100%;
 }
 
 .legacy-print-number {
@@ -2699,6 +2726,7 @@ tr:hover td {
 
 .legacy-pill.yes {
   background: #7c4dff;
+  color: #fff;
 }
 
 .legacy-pill.no {
@@ -3218,13 +3246,21 @@ tr:hover td {
 }
 
 @media print {
+  /* margin 0 evita los encabezados/pies del navegador (título, fecha, URL). */
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 0;
   }
 
   :root {
     color-scheme: light;
+  }
+
+  /* Asegura que TODOS los colores de la hoja se impriman. */
+  .legacy-print-sheet,
+  .legacy-print-sheet * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   html,
@@ -3284,7 +3320,7 @@ tr:hover td {
   .print-page {
     width: 100%;
     min-height: auto;
-    padding: 0;
+    padding: 9mm 8mm;
     margin: 0;
     overflow: visible;
   }

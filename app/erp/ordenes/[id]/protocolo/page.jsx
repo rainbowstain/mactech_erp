@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, formatDateTime, formatMoney, textOrDash } from "@/lib/format";
 import { getOrder } from "@/lib/orders";
+import { FaInstagram, FaTiktok, FaFacebookF } from "react-icons/fa6";
 import PrintButton from "../PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -48,11 +49,17 @@ export default async function OrderProtocolPage({ params }) {
             <img src="/brand/mactech-logo-color-trim.png" alt="MacTech" />
           </div>
           <div className="legacy-print-company">
-            <h5>MacTech Servicio Tecnico</h5>
-            <h5>RUT: -</h5>
-            <h5>mactech.cl</h5>
-            <h5>contacto@mactech.cl</h5>
-            <h5>Arica, Chile</h5>
+            <h5>Reparaciones Tecnológicas MacTech Arica SpA</h5>
+            <h5>Rut: 78.090.844-0</h5>
+            <h5>Bolognesi #340 Local 18</h5>
+            <h5>+56 9 5633 3621 · contacto@mactech.cl</h5>
+            <h5>www.mactech.cl</h5>
+            <h5 className="legacy-print-socials">
+              <FaInstagram aria-hidden="true" />
+              <FaTiktok aria-hidden="true" />
+              <FaFacebookF aria-hidden="true" />
+              <span>@mactech.cl</span>
+            </h5>
           </div>
           <div className="legacy-print-number">
             <h3>ORDEN DE TRABAJO</h3>

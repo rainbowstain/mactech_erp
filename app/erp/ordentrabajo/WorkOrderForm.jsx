@@ -59,7 +59,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
     estado_dispositivo: "",
     codigo: "",
     imei: "",
-    total_recepcion: "19990",
+    total_recepcion: "0",
     observacion: "",
   });
 
@@ -476,16 +476,6 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
                   value={order.imei}
                   onChange={(event) => updateOrder("imei", event.target.value.replace(/[-+eE]/g, ""))}
                 />
-              </Field>
-              <Field label="Valor Diagnostico">
-                <div className="legacy-input-addon">
-                  <span>$</span>
-                  <input
-                    type="number"
-                    value={order.total_recepcion}
-                    onChange={(event) => updateOrder("total_recepcion", event.target.value)}
-                  />
-                </div>
               </Field>
               <Field label="Fecha Entrega">
                 <input
