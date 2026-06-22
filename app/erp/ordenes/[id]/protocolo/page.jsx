@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, formatDateTime, formatMoney, textOrDash } from "@/lib/format";
 import { getOrder } from "@/lib/orders";
-import { FaInstagram, FaTiktok, FaFacebookF } from "react-icons/fa6";
+import { FaInstagram, FaTiktok, FaFacebookF, FaYoutube } from "react-icons/fa6";
 import PrintButton from "../PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +46,7 @@ export default async function OrderProtocolPage({ params }) {
       <article className="legacy-print-sheet legacy-protocol-sheet">
         <header className="legacy-print-header">
           <div className="legacy-print-logo">
-            <img src="/brand/mactech-logo-color-trim.png" alt="MacTech" />
+            <img src="/brand/mactech-logo-dark.svg" alt="MacTech" />
           </div>
           <div className="legacy-print-company">
             <h5>Reparaciones Tecnológicas MacTech Arica SpA</h5>
@@ -58,6 +58,7 @@ export default async function OrderProtocolPage({ params }) {
               <FaInstagram aria-hidden="true" />
               <FaTiktok aria-hidden="true" />
               <FaFacebookF aria-hidden="true" />
+              <FaYoutube aria-hidden="true" />
               <span>@mactech.cl</span>
             </h5>
           </div>
