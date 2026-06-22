@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
-import { formatMoney } from "@/lib/format";
 
 // "Diagnóstico" es una reparación sin pieza ni stock: precio fijo por tipo de
 // equipo (celular 19.990 · iPad/Mac 29.990). Se detecta por nombre.
@@ -78,15 +77,17 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
   );
 
   const filteredDevices = useMemo(() => {
-    if (!order.id_equipo) return deviceList;
-    return deviceList.filter((device) => String(device.modelo) === String(order.id_equipo));
+    const active = deviceList.filter((device) => Number(device.estado) === 1);
+    if (!order.id_equipo) return active;
+    return active.filter((device) => String(device.modelo) === String(order.id_equipo));
   }, [deviceList, order.id_equipo]);
 
   // Modelos que coinciden con el buscador (filtra por nombre: iPhone, MacBook, iMac…).
+  // Sin tope: el desplegable hace scroll por todos los modelos.
   const modelMatches = useMemo(() => {
     const query = modelQuery.trim().toLowerCase();
-    if (!query) return filteredDevices.slice(0, 60);
-    return filteredDevices.filter((device) => (device.nombre || "").toLowerCase().includes(query)).slice(0, 60);
+    if (!query) return filteredDevices;
+    return filteredDevices.filter((device) => (device.nombre || "").toLowerCase().includes(query));
   }, [filteredDevices, modelQuery]);
 
   const visibleQuestions = useMemo(() => {
@@ -371,8 +372,8 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
     <form className="legacy-workflow" onSubmit={saveOrder}>
       <article className="legacy-block">
         <div className="legacy-block-header">
-          <h2>Protocolo de recepcion de equipos</h2>
-          <span className="legacy-step">Recepcion</span>
+          <h2><span className="legacy-step-num">1</span>Protocolo de recepción de equipos</h2>
+          <span className="legacy-step">Paso 1 · Recepción</span>
         </div>
 
         <div className="legacy-row legacy-row-first">
@@ -562,7 +563,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
                           </option>
                           {availableItems.map((item) => (
                             <option key={item.id} value={item.id}>
-                              {item.producto} - {formatMoney(item.ultimo_precio_venta || item.valor_venta)}
+                              {item.producto}
                             </option>
                           ))}
                         </select>
@@ -635,8 +636,8 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
       {showForm ? (
         <article className="legacy-block">
           <div className="legacy-block-header">
-            <h2>Estado del equipo</h2>
-            <span className="legacy-step">Checklist</span>
+            <h2><span className="legacy-step-num">2</span>Estado del equipo</h2>
+            <span className="legacy-step">Paso 2 · Checklist</span>
           </div>
           <div className="legacy-row">
             <div className="legacy-question-title">1.-En que estado ingresa el celular <b>*</b></div>

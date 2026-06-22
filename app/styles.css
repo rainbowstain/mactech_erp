@@ -1962,9 +1962,26 @@ tr:hover td {
 }
 
 .legacy-block-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 11px;
   margin: 0;
   font-size: 17px;
   color: inherit;
+}
+
+.legacy-step-num {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.25);
 }
 
 .legacy-step {
@@ -1972,11 +1989,15 @@ tr:hover td {
   align-items: center;
   min-height: 26px;
   border-radius: 999px;
-  padding: 0 10px;
-  color: #111214;
-  background: rgba(124, 77, 255, 0.16);
-  font-size: 12px;
+  padding: 0 12px;
+  color: #fff;
+  background: rgba(124, 77, 255, 0.32);
+  border: 1px solid rgba(165, 148, 255, 0.5);
+  font-size: 11px;
   font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .legacy-form-grid {
@@ -2274,6 +2295,12 @@ tr:hover td {
 
 .legacy-input-addon input {
   border-radius: 0 3px 3px 0;
+}
+
+.dark-mode .legacy-input-addon span {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: #23262c;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .btn-dark-legacy,
