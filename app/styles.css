@@ -3687,9 +3687,15 @@ tr:hover td {
     overflow-wrap: anywhere;
   }
 
+  .work-order-print-page .legacy-stamp h3 {
+    margin: 0 0 3mm;
+    font-size: 15px;
+  }
+
   .work-order-print-page .legacy-stamp div {
-    height: 100%;
-    min-height: 34mm;
+    height: 38mm;
+    border: 2px solid #cfc6ee;
+    border-radius: 12px;
   }
 
   .legacy-print-header {
@@ -3750,14 +3756,14 @@ tr:hover td {
   }
 
   .work-order-print-page .legacy-round-box {
-    min-height: 11mm;
+    min-height: 30mm;
     margin-top: 2.5mm;
-    padding: 3mm 8mm;
+    padding: 5mm 8mm;
     font-size: 11px;
   }
 
   .work-order-print-page .legacy-round-box.tall {
-    min-height: 16mm;
+    min-height: 62mm;
   }
 
   .work-order-print-page .legacy-table-section {
@@ -3771,7 +3777,7 @@ tr:hover td {
   }
 
   .work-order-print-page .legacy-work-order-footer {
-    margin-top: 6mm;
+    margin-top: auto;
   }
 
   .work-order-print-page .legacy-work-order-footer > div {
