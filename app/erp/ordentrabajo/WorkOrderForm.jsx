@@ -42,12 +42,9 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
   const [modal, setModal] = useState(null); // null | "marca" | "modelo"
   const [modalName, setModalName] = useState("");
   const [modalSaving, setModalSaving] = useState(false);
-  const [modalError, setModalError] = useState("");
-  const [status, setStatus] = useState("");
   const [loadingClient, setLoadingClient] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [clientExists, setClientExists] = useState(false);
   const [answers, setAnswers] = useState({});
   const [client, setClient] = useState({
     id: null,
@@ -138,10 +135,9 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
 
   async function searchClient() {
     const run = client.run.trim();
-    setStatus("");
 
     if (!run) {
-      setStatus("Debe ingresar un RUN valido.");
+      notifyWarning("Debe ingresar un RUN valido.");
       return;
     }
 
@@ -151,7 +147,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setStatus(data.message || "No se pudo buscar el cliente.");
+        notifyWarning(data.message || "No se pudo buscar el cliente.");
         return;
       }
 
@@ -163,8 +159,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
           mail: data.client.mail || "",
           fono: data.client.fono || "",
         });
-        setClientExists(true);
-        setStatus("Cliente encontrado. Datos cargados automaticamente.");
+        notifySuccess("Cliente encontrado. Datos cargados automaticamente.");
       } else {
         setClient((current) => ({
           ...current,
@@ -173,13 +168,12 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
           mail: "",
           fono: "",
         }));
-        setClientExists(false);
-        setStatus(data.message || "Cliente no registrado. Puedes ingresarlo como nuevo.");
+        notifyWarning(data.message || "Cliente no registrado. Puedes ingresarlo como nuevo.");
       }
 
       setShowForm(true);
     } catch {
-      setStatus("No se pudo conectar con la busqueda de clientes.");
+      notifyWarning("No se pudo conectar con la busqueda de clientes.");
     } finally {
       setLoadingClient(false);
     }
@@ -225,22 +219,20 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
 
   function openAddModal(type) {
     if (type === "modelo" && !order.id_equipo) {
-      setStatus("Selecciona una marca antes de agregar un modelo.");
+      notifyWarning("Selecciona una marca antes de agregar un modelo.");
       return;
     }
     setModal(type);
     setModalName("");
-    setModalError("");
   }
 
   async function saveModal() {
     const name = modalName.trim();
     if (!name) {
-      setModalError("Ingresa un nombre.");
+      notifyWarning("Ingresa un nombre.");
       return;
     }
     setModalSaving(true);
-    setModalError("");
     try {
       if (modal === "marca") {
         const response = await fetch("/api/erp/mantenedores/equipos", {
@@ -268,7 +260,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
       }
       setModal(null);
     } catch (error) {
-      setModalError(error.message || "No se pudo guardar.");
+      notifyWarning(error.message || "No se pudo guardar.");
     } finally {
       setModalSaving(false);
     }
@@ -396,7 +388,6 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
                 </button>
               </div>
             </Field>
-            <p className={`lookup-status ${clientExists ? "found" : ""}`}>{status}</p>
           </div>
           <Field label="Fecha Ingreso">
             <input
@@ -706,7 +697,6 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
                 }
               }}
             />
-            {modalError ? <p className="wo-modal-error">{modalError}</p> : null}
             <div className="wo-modal-actions">
               <button type="button" className="ghost-button compact-button" onClick={() => setModal(null)} disabled={modalSaving}>
                 Cancelar

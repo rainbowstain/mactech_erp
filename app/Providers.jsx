@@ -10,7 +10,7 @@ export default function Providers({ children }) {
       <Toaster
         richColors
         closeButton
-        position="top-right"
+        position="bottom-right"
         toastOptions={{ className: "mactech-toast" }}
       />
       <ConfirmDialog />
