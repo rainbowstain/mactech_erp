@@ -4,16 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import { formatMoney, textOrDash } from "@/lib/format";
+import { notifyWarning, notifySuccess } from "@/lib/notify";
 
 export default function TranchesModule({ tranches }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function submitTranche(event) {
     event.preventDefault();
     const formElement = event.currentTarget;
-    setMessage("");
     setSaving(true);
     const form = Object.fromEntries(new FormData(formElement));
     try {
@@ -23,14 +22,14 @@ export default function TranchesModule({ tranches }) {
         body: JSON.stringify(form),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) setMessage(payload.message || "No se pudo guardar.");
+      if (!response.ok) notifyWarning(payload.message || "No se pudo guardar.");
       else {
         formElement.reset();
-        setMessage("Tramo registrado.");
+        notifySuccess("Tramo registrado.");
         router.refresh();
       }
     } catch {
-      setMessage("No se pudo conectar con el servidor.");
+      notifyWarning("No se pudo conectar con el servidor.");
     } finally {
       setSaving(false);
     }
@@ -43,7 +42,7 @@ export default function TranchesModule({ tranches }) {
       body: JSON.stringify({ id: tranche.id, estado: tranche.estado ? 0 : 1 }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) setMessage(payload.message || "No se pudo actualizar el estado.");
+    if (!response.ok) notifyWarning(payload.message || "No se pudo actualizar el estado.");
     else router.refresh();
   }
 
@@ -58,7 +57,6 @@ export default function TranchesModule({ tranches }) {
           <label className="legacy-field finance-field-wide"><span>Descripcion</span><input name="descripcion" /></label>
           <button className="primary-button inline-primary compact-button" type="submit" disabled={saving}><Plus size={16} />{saving ? "Guardando..." : "Agregar tramo"}</button>
         </form>
-        {message ? <p className="save-status">{message}</p> : null}
       </section>
 
       <section className="panel section-gap">

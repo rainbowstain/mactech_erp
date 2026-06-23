@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { formatMoney, textOrDash } from "@/lib/format";
+import { notifyInfo, notifySuccess, notifyWarning } from "@/lib/notify";
 import DataTable from "../DataTable";
 
 const emptyItem = {
@@ -241,7 +242,6 @@ export default function InventoryModule({
   const [form, setForm] = useState(() => ({ ...emptyItem, codigo_barra: makeBarcode(area) }));
   const [selectedIds, setSelectedIds] = useState([]);
   const [scanner, setScanner] = useState("");
-  const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [queryText, setQueryText] = useState("");
   const [total, setTotal] = useState(initialTotal);
@@ -324,13 +324,11 @@ export default function InventoryModule({
   function resetForm() {
     setEditing(null);
     setForm({ ...emptyItem, codigo_barra: makeBarcode(area) });
-    setMessage("");
   }
 
   function openEdit(item) {
     setEditing(item);
     setForm(toForm(item));
-    setMessage("");
   }
 
   async function refreshItems(overrides = {}) {
@@ -367,33 +365,32 @@ export default function InventoryModule({
 
   async function handleSearch(event) {
     event.preventDefault();
-    setMessage("");
     try {
       await refreshItems({ search: queryText, page: 1 });
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     }
   }
 
   function handleServerFilter(key, value) {
     const next = { ...serverFilters, [key]: value };
     setServerFilters(next);
-    refreshItems({ filters: next, page: 1 }).catch((error) => setMessage(error.message));
+    refreshItems({ filters: next, page: 1 }).catch((error) => notifyWarning(error.message));
   }
 
   function handlePageChange(next) {
-    refreshItems({ page: next }).catch((error) => setMessage(error.message));
+    refreshItems({ page: next }).catch((error) => notifyWarning(error.message));
   }
 
   function handlePageSizeChange(next) {
     setPageSize(next);
-    refreshItems({ page: 1, pageSize: next }).catch((error) => setMessage(error.message));
+    refreshItems({ page: 1, pageSize: next }).catch((error) => notifyWarning(error.message));
   }
 
   function handleShowAll() {
     setQueryText("");
     setServerFilters({});
-    refreshItems({ search: "", filters: {}, page: 1 }).catch((error) => setMessage(error.message));
+    refreshItems({ search: "", filters: {}, page: 1 }).catch((error) => notifyWarning(error.message));
   }
 
   async function openHistory(item) {
@@ -406,7 +403,7 @@ export default function InventoryModule({
       if (!response.ok) throw new Error(payload.message || "No se pudo cargar el historial.");
       setHistoryRows(payload.history || []);
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setHistoryLoading(false);
     }
@@ -422,28 +419,26 @@ export default function InventoryModule({
     const code = scanner.trim();
     if (!code) return;
 
-    setMessage("");
     try {
       const found = await refreshItems({ barcode: code, search: "" });
       if (found.length) {
         setSelectedIds([found[0].id]);
         openEdit(found[0]);
-        setMessage(`Codigo encontrado: ${found[0].producto}`);
+        notifySuccess(`Codigo encontrado: ${found[0].producto}`);
       } else {
         setEditing(null);
         setForm({ ...emptyItem, codigo_barra: code });
-        setMessage("Codigo nuevo listo para asociar a un producto.");
+        notifyInfo("Codigo nuevo listo para asociar a un producto.");
       }
       setScanner("");
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     }
   }
 
   async function saveItem(event) {
     event.preventDefault();
     setSaving(true);
-    setMessage("");
 
     const payload = {
       ...form,
@@ -476,10 +471,10 @@ export default function InventoryModule({
       setSelectedIds([saved.id]);
       setEditing(saved);
       setForm(toForm(saved));
-      setMessage(editing ? "Producto actualizado." : "Producto creado.");
+      notifySuccess(editing ? "Producto actualizado." : "Producto creado.");
       router.refresh();
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -488,7 +483,6 @@ export default function InventoryModule({
   async function toggleItemStatus(item) {
     const nextEstado = Number(item.estado) === 1 ? 0 : 1;
     setSaving(true);
-    setMessage("");
     try {
       const response = await fetch(`/api/erp/inventario/items/${item.id}`, {
         method: "PATCH",
@@ -498,10 +492,10 @@ export default function InventoryModule({
       const saved = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(saved.message || "No se pudo actualizar el estado.");
       setItems((current) => current.map((row) => (row.id === saved.id ? saved : row)));
-      setMessage(nextEstado ? "Producto reactivado." : "Producto deshabilitado.");
+      notifySuccess(nextEstado ? "Producto reactivado." : "Producto deshabilitado.");
       router.refresh();
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -509,12 +503,11 @@ export default function InventoryModule({
 
   async function moveStock(item, tipo) {
     if (tipo === "salida" && Number(item.cantidad) <= 0) {
-      setMessage("El producto no tiene stock para descontar.");
+      notifyWarning("El producto no tiene stock para descontar.");
       return;
     }
     const payload = { tipo, cantidad: 1 };
     setSaving(true);
-    setMessage("");
     try {
       const response = await fetch(`/api/erp/inventario/items/${item.id}/stock`, {
         method: "POST",
@@ -526,7 +519,7 @@ export default function InventoryModule({
       setItems((current) => current.map((row) => (row.id === saved.id ? saved : row)));
       if (editing?.id === saved.id) setForm(toForm(saved));
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -755,7 +748,6 @@ export default function InventoryModule({
                 Imprimir etiquetas ({selectedItems.length})
               </button>
             ) : null}
-            {message ? <p className="maintainer-message">{message}</p> : null}
           </div>
         </form>
 

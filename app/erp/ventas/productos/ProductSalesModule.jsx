@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Barcode, Minus, Plus, Printer, Save, Search, ShoppingCart, Trash2 } from "lucide-react";
 import { formatDateTime, formatMoney, textOrDash } from "@/lib/format";
+import { notifySuccess, notifyWarning } from "@/lib/notify";
 
 const PAYMENT_METHODS = ["EFECTIVO", "TRANSFERENCIA", "DEBITO", "CREDITO", "REDBANK", "OTRO"];
 
@@ -22,7 +23,6 @@ export default function ProductSalesModule({ initialItems, recentSales }) {
   const [scan, setScan] = useState("");
   const [metodoPago, setMetodoPago] = useState("EFECTIVO");
   const [notes, setNotes] = useState("");
-  const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
   const totals = useMemo(
@@ -49,11 +49,10 @@ export default function ProductSalesModule({ initialItems, recentSales }) {
 
   async function handleSearch(event) {
     event.preventDefault();
-    setMessage("");
     try {
       await refreshItems({ q: search });
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     }
   }
 
@@ -61,24 +60,23 @@ export default function ProductSalesModule({ initialItems, recentSales }) {
     event.preventDefault();
     const code = scan.trim();
     if (!code) return;
-    setMessage("");
     try {
       const found = await refreshItems({ q: "", barcode: code });
       if (found[0]) addToCart(found[0]);
-      else setMessage("Codigo no encontrado en inventario productos.");
+      else notifyWarning("Codigo no encontrado en inventario productos.");
       setScan("");
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     }
   }
 
   function addToCart(item) {
     if (Number(item.estado) !== 1) {
-      setMessage("Producto deshabilitado.");
+      notifyWarning("Producto deshabilitado.");
       return;
     }
     if (Number(item.cantidad) <= 0) {
-      setMessage("Producto sin stock disponible.");
+      notifyWarning("Producto sin stock disponible.");
       return;
     }
     setCart((current) => {
@@ -118,11 +116,10 @@ export default function ProductSalesModule({ initialItems, recentSales }) {
   async function saveSale(event) {
     event.preventDefault();
     if (!cart.length) {
-      setMessage("Agrega productos al carrito.");
+      notifyWarning("Agrega productos al carrito.");
       return;
     }
     setSaving(true);
-    setMessage("");
     try {
       const response = await fetch("/api/erp/ventas/productos", {
         method: "POST",
@@ -141,10 +138,10 @@ export default function ProductSalesModule({ initialItems, recentSales }) {
       if (!response.ok) throw new Error(payload.message || "No se pudo registrar la venta.");
       setCart([]);
       setNotes("");
-      setMessage(`Venta registrada: ${formatMoney(payload.total_bruto)}. Preparando boleta...`);
+      notifySuccess(`Venta registrada: ${formatMoney(payload.total_bruto)}. Preparando boleta...`);
       router.push(`/erp/ventas/${payload.id}/boleta`);
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -283,7 +280,6 @@ export default function ProductSalesModule({ initialItems, recentSales }) {
               <Save size={16} aria-hidden="true" />
               {saving ? "Guardando..." : "Registrar venta"}
             </button>
-            {message ? <p className="maintainer-message">{message}</p> : null}
           </form>
         </div>
       </section>

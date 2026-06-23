@@ -1,4 +1,5 @@
 import "./styles.css";
+import Providers from "./Providers";
 
 export const metadata = {
   title: "MacTech ERP",
@@ -26,7 +27,9 @@ export default function RootLayout({ children }) {
         />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

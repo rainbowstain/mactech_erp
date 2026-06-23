@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate, formatDateTime, formatMoney, textOrDash } from "@/lib/format";
+import { notifySuccess, notifyWarning } from "@/lib/notify";
 
 const ORDER_STATES = [
   { id: 2, label: "En diagnostico" },
@@ -49,8 +50,6 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
   const [newServicePrice, setNewServicePrice] = useState("");
   const [saving, setSaving] = useState(false);
   const [savingCosts, setSavingCosts] = useState(false);
-  const [message, setMessage] = useState("");
-  const [costsMessage, setCostsMessage] = useState("");
   const [serviceRows, setServiceRows] = useState(() =>
     (order.services || []).map((service) => ({
       key: `linked-${service.id}`,
@@ -121,7 +120,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
     const name = newServiceName.trim();
     const price = toInt(newServicePrice);
     if (!name || !price) {
-      setMessage("Ingresa nombre y valor del servicio.");
+      notifyWarning("Ingresa nombre y valor del servicio.");
       return;
     }
 
@@ -138,7 +137,6 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
     ]);
     setNewServiceName("");
     setNewServicePrice("");
-    setMessage("");
   }
 
   function addSelectedPart() {
@@ -193,11 +191,10 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
 
   async function saveCostCorrection() {
     if (!partRows.length) {
-      setCostsMessage("Agrega al menos un repuesto antes de guardar.");
+      notifyWarning("Agrega al menos un repuesto antes de guardar.");
       return;
     }
     setSavingCosts(true);
-    setCostsMessage("");
     try {
       // Un item existente en BD tiene id entero positivo; todo lo demás es nuevo.
       const isDbRow = (p) => Number.isInteger(Number(p.id)) && Number(p.id) > 0;
@@ -219,10 +216,10 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "No se pudo guardar.");
-      setCostsMessage("Costos actualizados correctamente.");
+      notifySuccess("Costos actualizados correctamente.");
       router.refresh();
     } catch (error) {
-      setCostsMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSavingCosts(false);
     }
@@ -230,7 +227,6 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
 
   async function saveRevision(action) {
     setSaving(true);
-    setMessage("");
 
     try {
       const response = await fetch(`/api/erp/ordenes/${order.id}/revision`, {
@@ -258,11 +254,11 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
         return;
       }
 
-      setMessage("Diagnostico y servicios guardados.");
+      notifySuccess("Diagnostico y servicios guardados.");
       setDiagnosis("");
       router.refresh();
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -510,7 +506,6 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
                 >
                   {savingCosts ? "Guardando..." : "Guardar corrección de costos"}
                 </button>
-                {costsMessage ? <p className="save-status">{costsMessage}</p> : null}
               </div>
             ) : null}
           </div>
@@ -528,7 +523,6 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
             </button>
           </div>
         ) : null}
-        {message ? <p className="save-status">{message}</p> : null}
       </section>
 
       {isClosed ? (

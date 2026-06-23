@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Edit3, KeyRound, Plus, RotateCcw, Save, ShieldCheck, Trash2, X } from "lucide-react";
 import { formatDateTime, textOrDash } from "@/lib/format";
+import { notifyWarning, notifySuccess } from "@/lib/notify";
 import DataTable from "../DataTable";
 
 function emptyValues() {
@@ -22,7 +23,6 @@ export default function UsersModule({ initialUsers, roles, currentUserId }) {
   const [editing, setEditing] = useState(null);
   const [values, setValues] = useState(emptyValues);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
   const isEditing = Boolean(editing);
 
   const roleMap = useMemo(() => new Map(roles.map((role) => [role.value, role])), [roles]);
@@ -34,7 +34,6 @@ export default function UsersModule({ initialUsers, roles, currentUserId }) {
   function openCreate() {
     setEditing(null);
     setValues(emptyValues());
-    setMessage("");
   }
 
   function openEdit(user) {
@@ -46,13 +45,11 @@ export default function UsersModule({ initialUsers, roles, currentUserId }) {
       estado: String(Boolean(user.estado)),
       password: "",
     });
-    setMessage("");
   }
 
   function closeForm() {
     setEditing(null);
     setValues(emptyValues());
-    setMessage("");
   }
 
   async function refreshUsers() {
@@ -62,7 +59,6 @@ export default function UsersModule({ initialUsers, roles, currentUserId }) {
   async function saveUser(event) {
     event.preventDefault();
     setSaving(true);
-    setMessage("");
     try {
       const response = await fetch(isEditing ? `/api/erp/usuarios/${editing.id}` : "/api/erp/usuarios", {
         method: isEditing ? "PUT" : "POST",
@@ -76,12 +72,12 @@ export default function UsersModule({ initialUsers, roles, currentUserId }) {
         if (!isEditing) return [payload, ...current];
         return current.map((user) => (user.id === payload.id ? payload : user));
       });
-      setMessage(isEditing ? "Usuario actualizado." : "Usuario creado.");
+      notifySuccess(isEditing ? "Usuario actualizado." : "Usuario creado.");
       setEditing(null);
       setValues(emptyValues());
       await refreshUsers();
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -90,7 +86,6 @@ export default function UsersModule({ initialUsers, roles, currentUserId }) {
   async function toggleUserStatus(user) {
     const nextEstado = !user.estado;
     setSaving(true);
-    setMessage("");
     try {
       const response = await fetch(`/api/erp/usuarios/${user.id}`, {
         method: "PATCH",
@@ -101,10 +96,10 @@ export default function UsersModule({ initialUsers, roles, currentUserId }) {
       if (!response.ok) throw new Error(payload.message || "No se pudo actualizar usuario.");
 
       setUsers((current) => current.map((row) => (row.id === payload.id ? payload : row)));
-      setMessage(nextEstado ? "Usuario reactivado." : "Usuario deshabilitado.");
+      notifySuccess(nextEstado ? "Usuario reactivado." : "Usuario deshabilitado.");
       await refreshUsers();
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -178,7 +173,6 @@ export default function UsersModule({ initialUsers, roles, currentUserId }) {
               <X size={16} aria-hidden="true" />
               Limpiar
             </button>
-            {message ? <p className="maintainer-message">{message}</p> : null}
           </div>
         </form>
       </section>

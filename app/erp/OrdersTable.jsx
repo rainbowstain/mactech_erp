@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { formatDate, formatMoney, textOrDash } from "@/lib/format";
+import { confirmAction, notifySuccess, notifyWarning } from "@/lib/notify";
 import DataTable from "./DataTable";
 
 function orderReviewHref(orderId) {
@@ -16,20 +17,26 @@ export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = f
   const [deletingId, setDeletingId] = useState(null);
 
   async function handleDelete(order) {
-    if (!window.confirm(`¿Eliminar la OT #${order.id} de ${order.cliente_nombre || "cliente"}? Esta acción no se puede deshacer.`)) {
-      return;
-    }
+    const ok = await confirmAction({
+      title: `Eliminar OT #${order.id}`,
+      message: `Se eliminará la OT de ${order.cliente_nombre || "cliente"}. Esta acción no se puede deshacer.`,
+      confirmLabel: "Eliminar",
+      cancelLabel: "Cancelar",
+      danger: true,
+    });
+    if (!ok) return;
     setDeletingId(order.id);
     try {
       const response = await fetch(`/api/erp/ordenes/${order.id}`, { method: "DELETE" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        window.alert(data.message || "No se pudo eliminar la orden.");
+        notifyWarning(data.message || "No se pudo eliminar la orden.");
         return;
       }
+      notifySuccess(`OT #${order.id} eliminada.`);
       router.refresh();
     } catch {
-      window.alert("No se pudo conectar para eliminar la orden.");
+      notifyWarning("No se pudo conectar para eliminar la orden.");
     } finally {
       setDeletingId(null);
     }

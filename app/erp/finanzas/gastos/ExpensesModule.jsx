@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import { formatDate, formatMoney, textOrDash } from "@/lib/format";
+import { notifyWarning, notifySuccess } from "@/lib/notify";
 
 const TYPES = [
   { value: "operativo", label: "Operativo" },
@@ -14,14 +15,12 @@ const TYPES = [
 
 export default function ExpensesModule({ expenses, recurring, year, month }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function submitExpense(event) {
     event.preventDefault();
     const formElement = event.currentTarget;
     setSaving(true);
-    setMessage("");
     const form = Object.fromEntries(new FormData(formElement));
     try {
       const response = await fetch("/api/erp/finanzas/gastos", {
@@ -32,10 +31,10 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "No se pudo guardar.");
       formElement.reset();
-      setMessage("Gasto registrado.");
+      notifySuccess("Gasto registrado.");
       router.refresh();
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -45,7 +44,6 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
     event.preventDefault();
     const formElement = event.currentTarget;
     setSaving(true);
-    setMessage("");
     const form = Object.fromEntries(new FormData(formElement));
     try {
       const response = await fetch("/api/erp/finanzas/recurrentes", {
@@ -56,10 +54,10 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "No se pudo guardar.");
       formElement.reset();
-      setMessage("Gasto recurrente registrado.");
+      notifySuccess("Gasto recurrente registrado.");
       router.refresh();
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -67,14 +65,13 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
 
   async function toggleStatus(endpoint, item) {
     const nextEstado = item.estado ? 0 : 1;
-    setMessage("");
     const response = await fetch(endpoint, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: item.id, estado: nextEstado }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) setMessage(payload.message || "No se pudo actualizar el estado.");
+    if (!response.ok) notifyWarning(payload.message || "No se pudo actualizar el estado.");
     else router.refresh();
   }
 
@@ -102,7 +99,6 @@ export default function ExpensesModule({ expenses, recurring, year, month }) {
           <label className="legacy-field finance-field-wide"><span>Descripcion</span><input name="descripcion" /></label>
           <button className="primary-button inline-primary compact-button" disabled={saving} type="submit"><Plus size={16} />Agregar recurrente</button>
         </form>
-        {message ? <p className="save-status">{message}</p> : null}
       </section>
 
       <section className="panel section-gap">

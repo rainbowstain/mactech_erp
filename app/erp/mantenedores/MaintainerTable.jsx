@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Edit3, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { formatMoney, textOrDash } from "@/lib/format";
+import { notifyWarning, notifySuccess } from "@/lib/notify";
 import DataTable from "../DataTable";
 
 function formatValue(value, type) {
@@ -25,7 +26,6 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
   const [editing, setEditing] = useState(null);
   const [values, setValues] = useState(() => emptyValues(fields));
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
   const isEditing = Boolean(editing);
   const formTitle = isEditing ? `Editar ${title}` : addLabel;
   const activeRows = rows.filter((row) => Number(row.estado) !== 0).length;
@@ -43,7 +43,6 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
   function openCreate() {
     setEditing(null);
     setValues(emptyValues(fields));
-    setMessage("");
     requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
@@ -54,14 +53,12 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
     }
     setEditing(row);
     setValues(nextValues);
-    setMessage("");
     requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function closeForm() {
     setEditing(null);
     setValues(emptyValues(fields));
-    setMessage("");
   }
 
   function updateValue(key, value) {
@@ -71,7 +68,6 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
   async function saveRecord(event) {
     event.preventDefault();
     setSaving(true);
-    setMessage("");
 
     const endpoint = isEditing
       ? `/api/erp/mantenedores/${resource}/${editing.id}`
@@ -86,12 +82,12 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "No se pudo guardar.");
 
-      setMessage(isEditing ? "Registro actualizado." : "Registro agregado.");
+      notifySuccess(isEditing ? "Registro actualizado." : "Registro agregado.");
       setEditing(null);
       setValues(emptyValues(fields));
       router.refresh();
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -100,7 +96,6 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
   async function toggleRecord(row) {
     const nextEstado = Number(row.estado) === 1 ? 0 : 1;
     setSaving(true);
-    setMessage("");
 
     try {
       const response = await fetch(`/api/erp/mantenedores/${resource}/${row.id}`, {
@@ -111,10 +106,10 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "No se pudo actualizar el estado.");
 
-      setMessage(nextEstado ? "Registro reactivado." : "Registro deshabilitado.");
+      notifySuccess(nextEstado ? "Registro reactivado." : "Registro deshabilitado.");
       router.refresh();
     } catch (error) {
-      setMessage(error.message);
+      notifyWarning(error.message);
     } finally {
       setSaving(false);
     }
@@ -213,7 +208,6 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
             <X size={16} aria-hidden="true" />
             Limpiar
           </button>
-          {message ? <p className="maintainer-message">{message}</p> : null}
         </div>
       </form>
 

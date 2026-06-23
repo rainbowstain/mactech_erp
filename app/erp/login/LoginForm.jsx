@@ -3,17 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
+import { notifyWarning } from "@/lib/notify";
 
 export default function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(event) {
     event.preventDefault();
-    setError("");
     setLoading(true);
 
     try {
@@ -25,14 +24,14 @@ export default function LoginForm() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setError(data.message || "No se pudo iniciar sesion.");
+        notifyWarning(data.message || "No se pudo iniciar sesion.");
         return;
       }
 
       router.replace("/erp");
       router.refresh();
     } catch {
-      setError("No se pudo conectar con el ERP local.");
+      notifyWarning("No se pudo conectar con el ERP local.");
     } finally {
       setLoading(false);
     }
@@ -62,7 +61,6 @@ export default function LoginForm() {
           onChange={(event) => setPassword(event.target.value)}
         />
       </div>
-      <p className="form-error">{error}</p>
       <button className="primary-button" type="submit" disabled={loading}>
         <LogIn size={18} aria-hidden="true" />
         {loading ? "Entrando..." : "Entrar"}

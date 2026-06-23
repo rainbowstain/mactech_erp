@@ -4059,3 +4059,114 @@ tr:hover td {
     content: "";
   }
 }
+
+/* ===== Alertas: toasts (sonner) + diálogo de confirmación ===== */
+.mactech-toast {
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-weight: 600;
+}
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 10, 40, 0.55);
+  backdrop-filter: blur(2px);
+  animation: confirm-fade 0.14s ease;
+}
+
+.confirm-dialog {
+  width: min(440px, 100%);
+  padding: 24px;
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--brand);
+  box-shadow: 0 24px 60px rgba(20, 12, 60, 0.35);
+  animation: confirm-pop 0.16s ease;
+}
+
+.confirm-dialog.danger {
+  border-top-color: var(--danger);
+}
+
+.confirm-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.confirm-message {
+  margin: 0 0 22px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-cancel,
+.confirm-continue {
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.confirm-cancel {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.confirm-cancel:hover {
+  background: var(--panel-soft);
+}
+
+.confirm-continue {
+  background: var(--brand);
+  color: #fff;
+}
+
+.confirm-continue:hover {
+  background: var(--brand-strong);
+}
+
+.confirm-continue.danger {
+  background: var(--danger);
+}
+
+.confirm-continue.danger:hover {
+  background: #b91c1c;
+}
+
+@keyframes confirm-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes confirm-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

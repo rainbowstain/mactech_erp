@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
+import { notifySuccess, notifyWarning } from "@/lib/notify";
 
 // "Diagnóstico" es una reparación sin pieza ni stock: precio fijo por tipo de
 // equipo (celular 19.990 · iPad/Mac 29.990). Se detecta por nombre.
@@ -47,7 +48,6 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [clientExists, setClientExists] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
   const [answers, setAnswers] = useState({});
   const [client, setClient] = useState({
     id: null,
@@ -327,10 +327,9 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
 
   async function saveOrder(event) {
     event.preventDefault();
-    setSaveMessage("");
 
     if (!showForm) {
-      setSaveMessage("Primero debe buscar el cliente por RUN.");
+      notifyWarning("Primero debe buscar el cliente por RUN.");
       return;
     }
 
@@ -354,15 +353,15 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setSaveMessage(data.message || "No se pudo guardar la orden.");
+        notifyWarning(data.message || "No se pudo guardar la orden.");
         return;
       }
 
-      setSaveMessage("Orden guardada. Abriendo protocolo...");
+      notifySuccess("Orden guardada. Abriendo protocolo...");
       router.push(`/erp/ordenes/${data.id}/protocolo`);
       router.refresh();
     } catch {
-      setSaveMessage("No se pudo conectar con el guardado de ordenes.");
+      notifyWarning("No se pudo conectar con el guardado de ordenes.");
     } finally {
       setSaving(false);
     }
@@ -678,7 +677,6 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
               onChange={(event) => updateOrder("observacion", event.target.value)}
             />
           </label>
-          {saveMessage ? <p className="save-status">{saveMessage}</p> : null}
           <div className="legacy-actions centered">
             <button className="primary-button inline-primary legacy-save" type="submit" disabled={saving}>
               {saving ? "Guardando..." : "Guardar"}
