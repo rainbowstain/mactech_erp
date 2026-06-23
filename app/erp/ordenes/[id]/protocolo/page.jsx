@@ -4,6 +4,7 @@ import { formatDate, formatDateTime, formatMoney, textOrDash } from "@/lib/forma
 import { getOrder } from "@/lib/orders";
 import { FaInstagram, FaTiktok, FaFacebookF, FaYoutube } from "react-icons/fa6";
 import PrintButton from "../PrintButton";
+import TermsQr from "../TermsQr";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +120,8 @@ export default async function OrderProtocolPage({ params }) {
             <h2>{formatMoney(protocolTotal)}</h2>
           </div>
         </section>
+
+        <TermsQr />
 
         <footer className="legacy-protocol-footer">
           <div>Nombre del Tecnico: {textOrDash(order.tecnico)}</div>

@@ -4,6 +4,7 @@ import { formatDate, formatDateTime, formatMoney, textOrDash } from "@/lib/forma
 import { getOrder } from "@/lib/orders";
 import { FaInstagram, FaTiktok, FaFacebookF, FaYoutube } from "react-icons/fa6";
 import PrintButton from "../PrintButton";
+import TermsQr from "../TermsQr";
 
 export const dynamic = "force-dynamic";
 
@@ -128,6 +129,8 @@ export default async function OrderPdfPage({ params }) {
             </tbody>
           </table>
         </section>
+
+        <TermsQr />
 
         <footer className="legacy-work-order-footer">
           <div>
