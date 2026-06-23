@@ -36,10 +36,6 @@ function calcTotals({ serviceTotal, descuento, fallbackTotal = 0 }) {
   };
 }
 
-function stockError(producto, available, requested) {
-  return `Stock insuficiente para ${producto || "repuesto"}: disponible ${available}, solicitado ${requested}.`;
-}
-
 export async function POST(request, { params }) {
   const session = await readSession();
   if (!session) {
@@ -146,9 +142,9 @@ export async function POST(request, { params }) {
         const unitCost = asInt(part.costo_unitario, item.valor_original || 0);
         const unitPrice = asInt(part.precio_unitario, item.ultimo_precio_venta ?? item.valor_venta ?? 0);
 
-        if (action === "close" && Number(item.cantidad || 0) < quantity) {
-          throw new Error(stockError(item.producto, Number(item.cantidad || 0), quantity));
-        }
+        // No bloqueamos por falta de stock: el inventario aun no esta contado.
+        // La rebaja queda registrada (el stock puede quedar negativo) y ademas
+        // se anota en inventario_movimientos para conciliarlo cuando se cuente.
 
         await db.query(
           `
@@ -184,7 +180,7 @@ export async function POST(request, { params }) {
 
         if (action === "close") {
           const previous = Number(item.cantidad || 0);
-          const next = Math.max(0, previous - quantity);
+          const next = previous - quantity; // permitimos negativo: marca el faltante por contar
           await db.query("update inventario_items set cantidad = $1, updated_at = now() where id = $2", [next, itemId]);
           await db.query(
             `

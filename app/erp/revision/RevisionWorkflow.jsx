@@ -149,9 +149,10 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
     setPartRows((current) => {
       const existing = current.find((row) => Number(row.inventario_item_id) === id);
       if (existing) {
+        // Sin tope por stock: el inventario aun no esta contado.
         return current.map((row) =>
           Number(row.inventario_item_id) === id
-            ? { ...row, cantidad: Math.min(toInt(row.cantidad) + 1, toInt(item.cantidad)) }
+            ? { ...row, cantidad: toInt(row.cantidad) + 1 }
             : row
         );
       }
@@ -179,7 +180,6 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
         if (row.key !== key) return row;
         const next = { ...row, ...patch };
         next.cantidad = Math.max(1, toInt(next.cantidad));
-        if (toInt(next.stock) > 0) next.cantidad = Math.min(next.cantidad, toInt(next.stock));
         next.costo_unitario = toInt(next.costo_unitario);
         next.precio_unitario = toInt(next.precio_unitario);
         return next;
