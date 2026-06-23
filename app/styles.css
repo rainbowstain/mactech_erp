@@ -2774,9 +2774,8 @@ tr:hover td {
   box-shadow: 0 18px 45px rgba(27, 39, 94, 0.16);
 }
 
-/* El pie siempre queda anclado al fondo de la hoja para repartir el espacio. */
-.legacy-protocol-footer,
-.legacy-work-order-footer {
+/* El protocolo ancla su pie al fondo para repartir el espacio. */
+.legacy-protocol-footer {
   margin-top: auto;
 }
 
@@ -3139,8 +3138,11 @@ tr:hover td {
 
 .legacy-services-table th {
   padding: 10px;
+  background: #7c4dff; /* en celdas: se imprime confiable (el fondo de <thead> no) */
   color: #fff;
   font-weight: 800;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 .legacy-services-table td {
@@ -3153,11 +3155,14 @@ tr:hover td {
   border-left: 5px solid #7c4dff;
 }
 
+/* Pegado a la tabla de servicios: forman un solo cuadro (la tabla aporta la
+   línea divisoria con su borde inferior, por eso el pie no lleva borde arriba). */
 .legacy-work-order-footer {
   display: grid;
   grid-template-columns: 1fr 1fr 2fr;
-  margin-top: 20px;
+  margin-top: 0;
   border: 5px solid #7c4dff;
+  border-top: 0;
   border-bottom-left-radius: 40px;
   border-bottom-right-radius: 40px;
   text-align: center;
@@ -3652,7 +3657,7 @@ tr:hover td {
   .work-order-print-page .legacy-print-sheet {
     width: 200mm;
     min-height: 304mm;
-    padding: 0;
+    padding: 12mm 0 0; /* respiro blanco en la parte superior */
   }
 
   .work-order-print-page .legacy-print-summary {
@@ -3756,14 +3761,14 @@ tr:hover td {
   }
 
   .work-order-print-page .legacy-round-box {
-    min-height: 30mm;
+    min-height: 24mm;
     margin-top: 2.5mm;
     padding: 5mm 8mm;
     font-size: 11px;
   }
 
   .work-order-print-page .legacy-round-box.tall {
-    min-height: 62mm;
+    min-height: 50mm;
   }
 
   .work-order-print-page .legacy-table-section {
@@ -3777,7 +3782,7 @@ tr:hover td {
   }
 
   .work-order-print-page .legacy-work-order-footer {
-    margin-top: auto;
+    margin-top: 0;
   }
 
   .work-order-print-page .legacy-work-order-footer > div {
