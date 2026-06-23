@@ -580,7 +580,7 @@ button:disabled {
 }
 
 .topbar-user-chip {
-  display: none;
+  display: flex;
   flex-direction: column;
   align-items: flex-end;
   line-height: 1.2;
@@ -3454,10 +3454,6 @@ tr:hover td {
   }
 
   .sidebar-mobile-toggle {
-    display: flex;
-  }
-
-  .topbar-user-chip {
     display: flex;
   }
 
