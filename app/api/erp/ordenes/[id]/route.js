@@ -63,11 +63,17 @@ export async function PATCH(request, { params }) {
   const orderId = asPositiveInt(Number(id));
   if (!orderId) return NextResponse.json({ message: "Orden inválida." }, { status: 400 });
 
-  const body = await request.json().catch(() => ({}));
+  let body = {};
+  try { body = await request.json(); } catch { /* body stays empty */ }
   const edits = Array.isArray(body.repuestos) ? body.repuestos : [];
   const nuevos = Array.isArray(body.repuestosNuevos) ? body.repuestosNuevos : [];
   const syncInventory = body.syncInventory !== false;
-  if (!edits.length && !nuevos.length) return NextResponse.json({ message: "Sin cambios." }, { status: 400 });
+  if (!edits.length && !nuevos.length) {
+    return NextResponse.json(
+      { message: `Sin cambios. repuestos:${edits.length} nuevos:${nuevos.length}` },
+      { status: 400 }
+    );
+  }
 
   try {
     const result = await transaction(async (db) => {

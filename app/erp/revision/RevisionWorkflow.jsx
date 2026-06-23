@@ -159,6 +159,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
         ...current,
         {
           key: `part-${id}-${Date.now()}`,
+          isNew: true,
           inventario_item_id: id,
           producto: item.producto,
           marca: item.marca,
@@ -194,12 +195,12 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
     setSavingCosts(true);
     setCostsMessage("");
     try {
-      const existing = partRows.filter((p) => p.id).map((p) => ({
+      const existing = partRows.filter((p) => p.id && !p.isNew).map((p) => ({
         id: p.id,
         costo_unitario: p.costo_unitario,
         precio_unitario: p.precio_unitario,
       }));
-      const nuevos = partRows.filter((p) => !p.id).map((p) => ({
+      const nuevos = partRows.filter((p) => p.isNew).map((p) => ({
         inventario_item_id: p.inventario_item_id,
         cantidad: p.cantidad,
         costo_unitario: p.costo_unitario,
