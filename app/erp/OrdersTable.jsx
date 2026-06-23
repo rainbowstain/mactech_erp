@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { formatDate, formatMoney, textOrDash } from "@/lib/format";
 import DataTable from "./DataTable";
 
@@ -8,7 +11,30 @@ function orderReviewHref(orderId) {
   return `/erp/ordenes?tab=revision&id=${orderId}`;
 }
 
-export default function OrdersTable({ orders, actionLabel = "Ver" }) {
+export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = false }) {
+  const router = useRouter();
+  const [deletingId, setDeletingId] = useState(null);
+
+  async function handleDelete(order) {
+    if (!window.confirm(`¿Eliminar la OT #${order.id} de ${order.cliente_nombre || "cliente"}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    setDeletingId(order.id);
+    try {
+      const response = await fetch(`/api/erp/ordenes/${order.id}`, { method: "DELETE" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        window.alert(data.message || "No se pudo eliminar la orden.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      window.alert("No se pudo conectar para eliminar la orden.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   if (!orders.length) {
     return <div className="empty-state">No hay ordenes para mostrar.</div>;
   }
@@ -64,9 +90,22 @@ export default function OrdersTable({ orders, actionLabel = "Ver" }) {
           align: "center",
           filter: false,
           render: (order) => (
-            <Link className="ghost-button compact-button" href={orderReviewHref(order.id)}>
-              {actionLabel}
-            </Link>
+            <div className="orders-actions">
+              <Link className="ghost-button compact-button" href={orderReviewHref(order.id)}>
+                {actionLabel}
+              </Link>
+              {canDelete ? (
+                <button
+                  type="button"
+                  className="ghost-button compact-button order-delete-button"
+                  onClick={() => handleDelete(order)}
+                  disabled={deletingId === order.id}
+                  title="Eliminar OT"
+                >
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
           ),
         },
       ]}

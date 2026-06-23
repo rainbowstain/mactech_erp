@@ -560,6 +560,79 @@ button:disabled {
 
 .sidebar-mobile-toggle {
   display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.sidebar-mobile-toggle:hover {
+  background: var(--surface-raised);
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+.topbar-user-chip {
+  display: none;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.topbar-user-chip span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.topbar-user-chip small {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.orders-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.order-delete-button {
+  color: #e54848 !important;
+}
+
+.order-delete-button:hover {
+  background: rgba(229, 72, 72, 0.1) !important;
+  border-color: rgba(229, 72, 72, 0.25) !important;
+}
+
+/* Mobile sidebar as drawer */
+.erp-shell.sidebar-mobile-open .sidebar {
+  display: flex;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 260px;
+  z-index: 200;
+  overflow-y: auto;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+}
+
+.erp-shell.sidebar-mobile-open .sidebar-overlay {
+  display: block;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 199;
 }
 
 .topbar-actions {
@@ -1907,6 +1980,11 @@ tr:hover td {
   border: 1px solid #dde5ef;
   border-radius: 6px;
   background: linear-gradient(180deg, #fff, #f8fafc);
+}
+
+.dark-mode .revision-part-row {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, #1c2026, #17191d);
 }
 
 .revision-part-row span {
@@ -3373,6 +3451,14 @@ tr:hover td {
 
   .legacy-field-form-wide {
     grid-column: auto;
+  }
+
+  .sidebar-mobile-toggle {
+    display: flex;
+  }
+
+  .topbar-user-chip {
+    display: flex;
   }
 
   .content,

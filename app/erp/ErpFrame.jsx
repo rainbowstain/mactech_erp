@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   Boxes,
   ChevronDown,
@@ -11,6 +12,7 @@ import {
   FileBarChart,
   Globe,
   LayoutDashboard,
+  Menu,
   PackageSearch,
   PanelLeftClose,
   PanelLeftOpen,
@@ -61,17 +63,17 @@ function activeGroupKey(active) {
   return groups.find((group) => group.items.some((item) => item.active === active))?.key || "";
 }
 
-function NavItem({ item, active, collapsed }) {
+function NavItem({ item, active, collapsed, onClose }) {
   const Icon = item.icon;
   return (
-    <Link className={`nav-main-link ${active === item.active ? "active" : ""}`} href={item.href} title={collapsed ? item.label : undefined}>
+    <Link className={`nav-main-link ${active === item.active ? "active" : ""}`} href={item.href} title={collapsed ? item.label : undefined} onClick={onClose}>
       <Icon size={18} aria-hidden="true" />
       <span>{item.label}</span>
     </Link>
   );
 }
 
-function NavGroup({ group, active, collapsed, openKey, setOpenKey }) {
+function NavGroup({ group, active, collapsed, openKey, setOpenKey, onClose }) {
   const Icon = group.icon;
   const isOpen = !collapsed && openKey === group.key;
   const isActive = group.items.some((item) => item.active === active);
@@ -93,7 +95,7 @@ function NavGroup({ group, active, collapsed, openKey, setOpenKey }) {
       </button>
       <div className="nav-main-submenu">
         {group.items.map((item) => (
-          <NavItem key={item.href} item={item} active={active} collapsed={collapsed} />
+          <NavItem key={item.href} item={item} active={active} collapsed={collapsed} onClose={onClose} />
         ))}
       </div>
     </div>
@@ -101,9 +103,11 @@ function NavGroup({ group, active, collapsed, openKey, setOpenKey }) {
 }
 
 export default function ErpFrame({ active, title, session, children }) {
+  const pathname = usePathname();
   const initialOpenKey = useMemo(() => activeGroupKey(active), [active]);
   const [openKey, setOpenKey] = useState(initialOpenKey);
   const [collapsed, setCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("mactech-erp-sidebar");
@@ -114,6 +118,10 @@ export default function ErpFrame({ active, title, session, children }) {
     if (!collapsed) setOpenKey(initialOpenKey);
   }, [active, collapsed, initialOpenKey]);
 
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   function toggleSidebar() {
     setCollapsed((current) => {
       const next = !current;
@@ -122,8 +130,13 @@ export default function ErpFrame({ active, title, session, children }) {
     });
   }
 
+  function closeMobileSidebar() {
+    setSidebarOpen(false);
+  }
+
   return (
-    <div className={`erp-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
+    <div className={`erp-shell ${collapsed ? "sidebar-collapsed" : ""} ${sidebarOpen ? "sidebar-mobile-open" : ""}`}>
+      {sidebarOpen ? <div className="sidebar-overlay" onClick={closeMobileSidebar} /> : null}
       <aside className="sidebar">
         <div className="sidebar-logo">
           <img src="/brand/mactech-logo-white-trim.png" alt="MacTech" />
@@ -138,7 +151,7 @@ export default function ErpFrame({ active, title, session, children }) {
         </div>
         <nav className="nav-list" aria-label="Principal">
           <div className="nav-main-item">
-            <NavItem item={{ href: "/erp", label: "Inicio", icon: LayoutDashboard, active: "dashboard" }} active={active} collapsed={collapsed} />
+            <NavItem item={{ href: "/erp", label: "Inicio", icon: LayoutDashboard, active: "dashboard" }} active={active} collapsed={collapsed} onClose={closeMobileSidebar} />
           </div>
           {groups.map((group) => (
             <NavGroup
@@ -148,6 +161,7 @@ export default function ErpFrame({ active, title, session, children }) {
               collapsed={collapsed}
               openKey={openKey}
               setOpenKey={setOpenKey}
+              onClose={closeMobileSidebar}
             />
           ))}
         </nav>
@@ -156,9 +170,16 @@ export default function ErpFrame({ active, title, session, children }) {
       <main className="main">
         <header className="topbar">
           <div className="topbar-title-group">
+            <button className="sidebar-mobile-toggle" type="button" onClick={() => setSidebarOpen((v) => !v)} aria-label="Abrir menú">
+              <Menu size={22} aria-hidden="true" />
+            </button>
             <h1>{title}</h1>
           </div>
           <div className="topbar-actions">
+            <div className="topbar-user-chip">
+              <span>{session.name || session.email}</span>
+              <small>{session.role}</small>
+            </div>
             <a className="ghost-button compact-button topbar-web-link" href={publicWebUrl} target="_blank" rel="noreferrer">
               <Globe size={16} aria-hidden="true" />
               <span>Ir a web</span>

@@ -36,7 +36,7 @@ function calcTotals(serviceTotal, discount, fallbackTotal = 0) {
   };
 }
 
-export default function RevisionWorkflow({ order, services, workshopItems = [] }) {
+export default function RevisionWorkflow({ order, services, workshopItems = [], canEditCosts = false }) {
   const router = useRouter();
   const [diagnosis, setDiagnosis] = useState("");
   const [estado, setEstado] = useState(String(order.estado >= 5 ? order.estado : Math.max(2, order.estado || 2)));
@@ -48,7 +48,9 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
   const [newServiceName, setNewServiceName] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingCosts, setSavingCosts] = useState(false);
   const [message, setMessage] = useState("");
+  const [costsMessage, setCostsMessage] = useState("");
   const [serviceRows, setServiceRows] = useState(() =>
     (order.services || []).map((service) => ({
       key: `linked-${service.id}`,
@@ -62,6 +64,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
   const [partRows, setPartRows] = useState(() =>
     (order.repuestos || []).map((part) => ({
       key: `part-${part.id}`,
+      id: part.id,
       inventario_item_id: part.inventario_item_id,
       producto: part.producto,
       marca: part.marca,
@@ -185,6 +188,32 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
 
   function removeNewService(key) {
     setServiceRows((current) => current.filter((service) => service.key !== key || !service.isNew));
+  }
+
+  async function saveCostCorrection() {
+    setSavingCosts(true);
+    setCostsMessage("");
+    try {
+      const response = await fetch(`/api/erp/ordenes/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repuestos: partRows.map((p) => ({
+            id: p.id,
+            costo_unitario: p.costo_unitario,
+            precio_unitario: p.precio_unitario,
+          })),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || "No se pudo guardar.");
+      setCostsMessage("Costos actualizados correctamente.");
+      router.refresh();
+    } catch (error) {
+      setCostsMessage(error.message);
+    } finally {
+      setSavingCosts(false);
+    }
   }
 
   async function saveRevision(action) {
@@ -436,10 +465,19 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
                   <input
                     inputMode="numeric"
                     value={part.precio_unitario}
-                    readOnly={isClosed}
+                    readOnly={isClosed && !canEditCosts}
                     onChange={(event) => updatePart(part.key, { precio_unitario: event.target.value.replace(/\D/g, "") })}
                     title="Precio venta"
                   />
+                  {isClosed && canEditCosts ? (
+                    <input
+                      inputMode="numeric"
+                      value={part.costo_unitario}
+                      onChange={(event) => updatePart(part.key, { costo_unitario: event.target.value.replace(/\D/g, "") })}
+                      title="Costo unitario"
+                      placeholder="Costo"
+                    />
+                  ) : null}
                   <strong>{formatMoney(toInt(part.precio_unitario) * toInt(part.cantidad))}</strong>
                   {!isClosed ? (
                     <button type="button" onClick={() => setPartRows((current) => current.filter((row) => row.key !== part.key))}>
@@ -450,6 +488,20 @@ export default function RevisionWorkflow({ order, services, workshopItems = [] }
               ))}
               {!partRows.length ? <div className="empty-state compact-empty">Sin repuestos asociados.</div> : null}
             </div>
+
+            {isClosed && canEditCosts && partRows.length > 0 ? (
+              <div className="legacy-actions centered" style={{ marginTop: "12px" }}>
+                <button
+                  className="ghost-button compact-button"
+                  type="button"
+                  disabled={savingCosts}
+                  onClick={saveCostCorrection}
+                >
+                  {savingCosts ? "Guardando..." : "Guardar corrección de costos"}
+                </button>
+                {costsMessage ? <p className="save-status">{costsMessage}</p> : null}
+              </div>
+            ) : null}
           </div>
         </div>
 

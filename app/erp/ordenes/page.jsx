@@ -7,7 +7,7 @@ import { formatDateTime, textOrDash } from "@/lib/format";
 import { getInventoryItems } from "@/lib/inventory";
 import { getDevices, getDeviceStates, getEquipment, getParts, getQuestions, getServices } from "@/lib/maintainers";
 import { getClosedOrders, getOrder, getOrders, getReviewOrders } from "@/lib/orders";
-import { getUsers } from "@/lib/users";
+import { getUsers, canDeleteOrders } from "@/lib/users";
 import { readSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -116,6 +116,9 @@ export default async function OrdersPage({ searchParams }) {
   const tab = ORDER_TABS.some((item) => item.key === requestedTab) ? requestedTab : "ordenes";
   const search = String(params?.q || "");
 
+  const pageSession = await readSession();
+  const canDelete = canDeleteOrders(pageSession);
+
   let content = null;
 
   if (tab === "ingreso") {
@@ -159,26 +162,36 @@ export default async function OrdersPage({ searchParams }) {
     content = (
       <>
         <ReviewSearch id={id} run={run} nombre={nombre} hasSearch={hasSearch} orders={orders} />
-        {fullOrder ? <RevisionWorkflow order={fullOrder} services={services} workshopItems={workshopItems} /> : null}
+        {fullOrder ? <RevisionWorkflow order={fullOrder} services={services} workshopItems={workshopItems} canEditCosts={canDelete} /> : null}
       </>
     );
   }
 
   if (tab === "cerradas") {
-    const orders = await getClosedOrders({ limit: 300, search });
+    const equipoId = String(params?.eq || "");
+    const [orders, equipment] = await Promise.all([
+      getClosedOrders({ limit: 300, search, equipoId }),
+      getEquipment(),
+    ]);
     content = (
       <section className="panel section-gap">
         <div className="panel-header panel-header-wrap">
           <h2>Ordenes cerradas</h2>
           <form className="search-form">
             <input type="hidden" name="tab" value="cerradas" />
-            <input name="q" defaultValue={search} placeholder="Buscar OT cerrada, cliente, RUT o equipo" />
+            <select name="eq" defaultValue={equipoId}>
+              <option value="">Todos los equipos</option>
+              {equipment.filter((e) => Number(e.estado) === 1).map((e) => (
+                <option key={e.id} value={e.id}>{e.nombre}</option>
+              ))}
+            </select>
+            <input name="q" defaultValue={search} placeholder="Buscar OT, cliente, RUT o modelo" />
             <button className="ghost-button compact-button" type="submit">
               Buscar
             </button>
           </form>
         </div>
-        <OrdersTable orders={orders} />
+        <OrdersTable orders={orders} canDelete={canDelete} />
       </section>
     );
   }
@@ -197,7 +210,7 @@ export default async function OrdersPage({ searchParams }) {
             </button>
           </form>
         </div>
-        <OrdersTable orders={orders} />
+        <OrdersTable orders={orders} canDelete={canDelete} />
       </section>
     );
   }
