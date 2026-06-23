@@ -31,6 +31,8 @@ export async function DELETE(request, { params }) {
     const result = await transaction(async (db) => {
       const exists = await db.query("select id from ordenes where id = $1 limit 1", [orderId]);
       if (!exists.rows[0]) return { missing: true };
+      // Anular referencias en inventario antes de borrar la orden
+      await db.query("update inventario_items set ultima_orden_id = null where ultima_orden_id = $1", [orderId]);
       await db.query(
         "delete from venta_items where venta_id in (select id from ventas where orden_id = $1 and tipo = 'ot')",
         [orderId]
@@ -63,8 +65,9 @@ export async function PATCH(request, { params }) {
 
   const body = await request.json().catch(() => ({}));
   const edits = Array.isArray(body.repuestos) ? body.repuestos : [];
-  const syncInventory = body.syncInventory !== false; // por defecto sí
-  if (!edits.length) return NextResponse.json({ message: "Sin cambios." }, { status: 400 });
+  const nuevos = Array.isArray(body.repuestosNuevos) ? body.repuestosNuevos : [];
+  const syncInventory = body.syncInventory !== false;
+  if (!edits.length && !nuevos.length) return NextResponse.json({ message: "Sin cambios." }, { status: 400 });
 
   try {
     const result = await transaction(async (db) => {
@@ -92,6 +95,25 @@ export async function PATCH(request, { params }) {
           await db.query(
             "update inventario_items set valor_original = $1, ultimo_precio_venta = $2, ultimo_precio_fecha = now(), updated_at = now() where id = $3",
             [costo, precio, line.inventario_item_id]
+          );
+        }
+      }
+
+      // Insertar repuestos nuevos (OT cerrada sin repuesto previo).
+      for (const nuevo of nuevos) {
+        const itemId = asPositiveInt(nuevo.inventario_item_id) || null;
+        const cantidad = Math.max(1, asInt(nuevo.cantidad, 1));
+        const costo = asInt(nuevo.costo_unitario);
+        const precio = asInt(nuevo.precio_unitario);
+        await db.query(
+          `insert into orden_repuestos (orden_id, inventario_item_id, cantidad, costo_unitario, precio_unitario, total_costo, total_venta)
+           values ($1, $2, $3, $4, $5, $6, $7)`,
+          [orderId, itemId, cantidad, costo, precio, costo * cantidad, precio * cantidad]
+        );
+        if (syncInventory && itemId) {
+          await db.query(
+            "update inventario_items set ultima_orden_id = $1, updated_at = now() where id = $2",
+            [orderId, itemId]
           );
         }
       }

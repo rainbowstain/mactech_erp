@@ -194,16 +194,21 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
     setSavingCosts(true);
     setCostsMessage("");
     try {
+      const existing = partRows.filter((p) => p.id).map((p) => ({
+        id: p.id,
+        costo_unitario: p.costo_unitario,
+        precio_unitario: p.precio_unitario,
+      }));
+      const nuevos = partRows.filter((p) => !p.id).map((p) => ({
+        inventario_item_id: p.inventario_item_id,
+        cantidad: p.cantidad,
+        costo_unitario: p.costo_unitario,
+        precio_unitario: p.precio_unitario,
+      }));
       const response = await fetch(`/api/erp/ordenes/${order.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          repuestos: partRows.map((p) => ({
-            id: p.id,
-            costo_unitario: p.costo_unitario,
-            precio_unitario: p.precio_unitario,
-          })),
-        }),
+        body: JSON.stringify({ repuestos: existing, repuestosNuevos: nuevos }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "No se pudo guardar.");
@@ -430,25 +435,23 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
               {!serviceRows.length ? <div className="empty-state compact-empty">Sin servicios ingresados.</div> : null}
             </div>
 
-            {!isClosed ? (
-              <>
-                <label className="legacy-field">
-                  <span>Repuestos Taller:</span>
-                  <div className="legacy-input-button">
-                    <select value={selectedPart} onChange={(event) => setSelectedPart(event.target.value)}>
-                      <option value="">Seleccione Repuesto</option>
-                      {workshopItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.producto} - {formatMoney(item.valor_venta)} - Stock {item.cantidad}
-                        </option>
-                      ))}
-                    </select>
-                    <button className="legacy-plus" type="button" onClick={addSelectedPart}>
-                      +
-                    </button>
-                  </div>
-                </label>
-              </>
+            {(!isClosed || canEditCosts) ? (
+              <label className="legacy-field">
+                <span>{isClosed ? "Agregar repuesto (corrección):" : "Repuestos Taller:"}</span>
+                <div className="legacy-input-button">
+                  <select value={selectedPart} onChange={(event) => setSelectedPart(event.target.value)}>
+                    <option value="">Seleccione Repuesto</option>
+                    {workshopItems.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.producto} - {formatMoney(item.valor_venta)} - Stock {item.cantidad}
+                      </option>
+                    ))}
+                  </select>
+                  <button className="legacy-plus" type="button" onClick={addSelectedPart}>
+                    +
+                  </button>
+                </div>
+              </label>
             ) : null}
 
             <div className="revision-service-list">
@@ -467,14 +470,15 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
                     value={part.precio_unitario}
                     readOnly={isClosed && !canEditCosts}
                     onChange={(event) => updatePart(part.key, { precio_unitario: event.target.value.replace(/\D/g, "") })}
-                    title="Precio venta"
+                    title="Precio cobrado al cliente"
+                    placeholder="Precio venta"
                   />
                   {isClosed && canEditCosts ? (
                     <input
                       inputMode="numeric"
                       value={part.costo_unitario}
                       onChange={(event) => updatePart(part.key, { costo_unitario: event.target.value.replace(/\D/g, "") })}
-                      title="Costo unitario"
+                      title="Costo real del repuesto (no visible al cliente)"
                       placeholder="Costo"
                     />
                   ) : null}
@@ -489,7 +493,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
               {!partRows.length ? <div className="empty-state compact-empty">Sin repuestos asociados.</div> : null}
             </div>
 
-            {isClosed && canEditCosts && partRows.length > 0 ? (
+            {isClosed && canEditCosts ? (
               <div className="legacy-actions centered" style={{ marginTop: "12px" }}>
                 <button
                   className="ghost-button compact-button"
