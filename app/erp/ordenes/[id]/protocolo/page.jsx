@@ -8,9 +8,9 @@ import TermsQr from "../TermsQr";
 
 export const dynamic = "force-dynamic";
 
-function PrintField({ label, value }) {
+function PrintField({ label, value, className }) {
   return (
-    <div className="legacy-print-field">
+    <div className={className ? `legacy-print-field ${className}` : "legacy-print-field"}>
       <p>{label}:</p>
       <div>{textOrDash(value)}</div>
     </div>
@@ -84,7 +84,7 @@ export default async function OrderProtocolPage({ params }) {
               <PrintField label="Imei" value={order.imei} />
             </div>
             <div>
-              <PrintField label="E-mail" value={order.cliente_mail} />
+              <PrintField label="E-mail" value={order.cliente_mail} className="is-email" />
               <PrintField label="Codigo Acceso" value={order.codigo} />
             </div>
           </div>
