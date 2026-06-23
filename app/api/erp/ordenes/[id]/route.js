@@ -69,10 +69,7 @@ export async function PATCH(request, { params }) {
   const nuevos = Array.isArray(body.repuestosNuevos) ? body.repuestosNuevos : [];
   const syncInventory = body.syncInventory !== false;
   if (!edits.length && !nuevos.length) {
-    return NextResponse.json(
-      { message: `Sin cambios. repuestos:${edits.length} nuevos:${nuevos.length}` },
-      { status: 400 }
-    );
+    return NextResponse.json({ message: "Sin cambios." }, { status: 400 });
   }
 
   try {
