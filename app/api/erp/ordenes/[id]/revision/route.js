@@ -98,6 +98,21 @@ export async function POST(request, { params }) {
           const serviceName = asText(service.nombre);
           if (!serviceName) continue;
 
+          // Evita triplicado: si esta orden ya tiene un servicio con ese nombre,
+          // no creamos otro servicio ni otro vínculo (cada guardado reenvía los
+          // manuales con servicio_id nulo, lo que generaba duplicados).
+          const dup = await db.query(
+            `
+              select ohs.id
+              from orden_has_servicios ohs
+              join servicios s on s.id = ohs.servicio_id
+              where ohs.orden_id = $1 and lower(trim(s.nombre)) = lower(trim($2))
+              limit 1
+            `,
+            [orderId, serviceName]
+          );
+          if (dup.rows[0]) continue;
+
           const insertedService = await db.query(
             `
               insert into servicios (nombre, precio, estado)

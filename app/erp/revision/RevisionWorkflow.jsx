@@ -254,6 +254,9 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
         return;
       }
 
+      // Ya quedaron persistidos: dejan de ser "nuevos" para no reinsertarlos
+      // en un guardado posterior (evita duplicar servicios manuales).
+      setServiceRows((rows) => rows.map((row) => ({ ...row, isNew: false })));
       notifySuccess("Diagnostico y servicios guardados.");
       setDiagnosis("");
       router.refresh();
