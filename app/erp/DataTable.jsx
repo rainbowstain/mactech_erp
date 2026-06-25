@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { textOrDash } from "@/lib/format";
+import Combobox from "./Combobox";
 
 function normalize(value) {
   return String(value ?? "")
@@ -144,7 +145,13 @@ export default function DataTable({
         {filterableColumns.map((column) => (
           <label key={column.key}>
             <span>{column.label}</span>
-            {column.filterOptions ? (
+            {column.filterOptions && column.filterSearchable ? (
+              <Combobox
+                value={filters[column.key] || ""}
+                options={column.filterOptions}
+                onChange={(value) => updateFilter(column.key, value)}
+              />
+            ) : column.filterOptions ? (
               <select value={filters[column.key] || ""} onChange={(event) => updateFilter(column.key, event.target.value)}>
                 <option value="">Todos</option>
                 {column.filterOptions.map((option) => (

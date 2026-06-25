@@ -282,6 +282,14 @@ export default function InventoryModule({
     () => parts.map((part) => ({ value: String(part.id), label: part.nombre })),
     [parts]
   );
+  const deviceOptions = useMemo(
+    () =>
+      devices.map((device) => ({
+        value: String(device.id),
+        label: `${device.equipo_nombre || ""} ${device.nombre}`.trim(),
+      })),
+    [devices]
+  );
   const providerOptions = useMemo(
     () => providers.map((provider) => ({ value: provider, label: provider })),
     [providers]
@@ -343,6 +351,7 @@ export default function InventoryModule({
     if (barcode) params.set("barcode", barcode);
     if (serverMode) {
       if (filters.marca) params.set("equipoId", filters.marca);
+      if (filters.modelo) params.set("dispositivoId", filters.modelo);
       if (filters.repuesto_nombre) params.set("repuestoId", filters.repuesto_nombre);
       if (filters.proveedor) params.set("proveedor", filters.proveedor);
       if (filters.estado) params.set("estado", filters.estado);
@@ -805,8 +814,8 @@ export default function InventoryModule({
                   {
                     key: "modelo",
                     label: "Modelo",
-                    filter: serverMode ? false : undefined,
-                    filterOptions: tableFilterOptions.modelos,
+                    filterOptions: serverMode ? deviceOptions : tableFilterOptions.modelos,
+                    filterSearchable: true,
                     value: (item) =>
                       item.dispositivo_nombre ? `${item.equipo_nombre || ""} ${item.dispositivo_nombre}`.trim() : "Generico",
                     render: (item) =>
@@ -815,13 +824,19 @@ export default function InventoryModule({
                   {
                     key: "repuesto_nombre",
                     label: "Tipo",
+                    filterSearchable: serverMode,
                     filterOptions: serverMode ? partOptions : tableFilterOptions.repuestos,
                     value: (item) => item.repuesto_nombre || "",
                     render: (item) => textOrDash(item.repuesto_nombre),
                   },
                 ]
               : []),
-            { key: "marca", label: "Marca", filterOptions: serverMode ? brandOptions : tableFilterOptions.marcas },
+            {
+              key: "marca",
+              label: "Marca",
+              filterSearchable: serverMode,
+              filterOptions: serverMode ? brandOptions : tableFilterOptions.marcas,
+            },
             {
               key: "cantidad",
               label: "Stock",
@@ -852,6 +867,7 @@ export default function InventoryModule({
             {
               key: "proveedor",
               label: "Proveedor",
+              filterSearchable: serverMode,
               filterOptions: serverMode ? providerOptions : tableFilterOptions.proveedores,
               render: (item) => textOrDash(item.proveedor),
             },
