@@ -3715,6 +3715,13 @@ tr:hover td {
     display: none !important;
   }
 
+  /* Los toasts (sonner) y el diálogo de confirmación no deben salir impresos. */
+  [data-sonner-toaster],
+  .mactech-toast,
+  .confirm-overlay {
+    display: none !important;
+  }
+
   .print-only {
     display: grid !important;
   }
