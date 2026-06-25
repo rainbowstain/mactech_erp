@@ -3,8 +3,6 @@ import { readSession } from "@/lib/auth";
 import { transaction } from "@/lib/db";
 import { materializeOrderSale } from "@/lib/finance";
 
-const DEFAULT_CLOSE_NOTE = "Equipo funciona correctamente, cliente retira conforme.";
-
 function asText(value) {
   return String(value || "").trim();
 }
@@ -51,7 +49,9 @@ export async function POST(request, { params }) {
   const body = await request.json().catch(() => ({}));
   const action = body.action === "close" ? "close" : "save";
   const estado = asPositiveInt(body.estado) || 2;
-  const observacion = asNullableText(body.observacion) || (action === "close" ? DEFAULT_CLOSE_NOTE : null);
+  // La nota de cierre ya viene pre-escrita y editable desde el formulario.
+  // Solo guardamos lo que el usuario deja escrito (puede borrarla).
+  const observacion = asNullableText(body.observacion);
   const services = Array.isArray(body.services) ? body.services : [];
   const repuestos = Array.isArray(body.repuestos) ? body.repuestos : [];
   const metodopago = asNullableText(body.metodopago);

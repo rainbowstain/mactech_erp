@@ -12,6 +12,10 @@ const ORDER_STATES = [
   { id: 4, label: "Garantia" },
 ];
 
+// Nota de cierre que se deja pre-escrita y editable en el campo de
+// diagnostico/reparacion (antes se insertaba automaticamente al cerrar).
+const DEFAULT_CLOSE_NOTE = "Equipo funciona correctamente, cliente retira conforme.";
+
 function toInt(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(0, Math.round(number)) : 0;
@@ -39,7 +43,7 @@ function calcTotals(serviceTotal, discount, fallbackTotal = 0) {
 
 export default function RevisionWorkflow({ order, services, workshopItems = [], canEditCosts = false }) {
   const router = useRouter();
-  const [diagnosis, setDiagnosis] = useState("");
+  const [diagnosis, setDiagnosis] = useState(DEFAULT_CLOSE_NOTE);
   const [estado, setEstado] = useState(String(order.estado >= 5 ? order.estado : Math.max(2, order.estado || 2)));
   const [metodopago, setMetodopago] = useState(order.metodopago || "");
   const [descuento, setDescuento] = useState(toInt(order.descuento));
@@ -258,7 +262,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
       // en un guardado posterior (evita duplicar servicios manuales).
       setServiceRows((rows) => rows.map((row) => ({ ...row, isNew: false })));
       notifySuccess("Diagnostico y servicios guardados.");
-      setDiagnosis("");
+      setDiagnosis(DEFAULT_CLOSE_NOTE);
       router.refresh();
     } catch (error) {
       notifyWarning(error.message);
@@ -463,7 +467,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
             <div className="revision-service-list">
               {partRows.map((part) => (
                 <div className="revision-part-row" key={part.key}>
-                  <span>{textOrDash(part.producto)}</span>
+                  <span title={textOrDash(part.producto)}>{textOrDash(part.producto)}</span>
                   <input
                     inputMode="numeric"
                     value={part.cantidad}

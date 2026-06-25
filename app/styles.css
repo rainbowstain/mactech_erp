@@ -1989,9 +1989,9 @@ tr:hover td {
 
 .revision-part-row span {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
   font-weight: 700;
 }
 
