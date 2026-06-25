@@ -5,15 +5,6 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { notifySuccess, notifyWarning } from "@/lib/notify";
 
-// "Diagnóstico" es una reparación sin pieza ni stock: precio fijo por tipo de
-// equipo (celular 19.990 · iPad/Mac 29.990). Se detecta por nombre.
-const DIAG_PRICE_CEL = 19990;
-const DIAG_PRICE_IPAD_MAC = 29990;
-const isDiagnostico = (nombre) => /^\s*diagn[oó]stico/i.test(nombre || "");
-// iPad/Mac valen distinto; el patrón evita falsos positivos (MACRO, CHROMEBOOK).
-const isIpadOrMac = (nombre) => /ipad|macbook|imac|mac\s?(pro|air|mini|studio)|\bmac\b/i.test(nombre || "");
-const diagnosticoPrice = (deviceName) => (isIpadOrMac(deviceName) ? DIAG_PRICE_IPAD_MAC : DIAG_PRICE_CEL);
-
 function nowForInput() {
   const date = new Date();
   date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
@@ -270,19 +261,14 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
     setOrder((current) => {
       const reparaciones = current.reparaciones.map((repair, repairIndex) => {
         if (repairIndex !== index) return repair;
+        // El precio ya NO se autocompleta: el campo parte en blanco (0) y el
+        // valor se escribe siempre a mano. El registro interno se mantiene como
+        // ya existe (el servidor conserva sus referencias).
         if (field === "reparacion_id") {
-          const selectedPart = parts.find((part) => String(part.id) === String(value));
-          let precio_unitario = "";
-          if (isDiagnostico(selectedPart?.nombre)) {
-            const device = deviceList.find((item) => String(item.id) === String(current.id_dispositivo));
-            precio_unitario = String(diagnosticoPrice(device?.nombre));
-          }
-          return { ...repair, reparacion_id: value, inventario_item_id: "", precio_unitario };
+          return { ...repair, reparacion_id: value, inventario_item_id: "", precio_unitario: "" };
         }
         if (field === "inventario_item_id") {
-          const found = deviceItems.find((item) => String(item.id) === String(value));
-          const lastPrice = found ? found.ultimo_precio_venta || found.valor_venta || "" : "";
-          return { ...repair, inventario_item_id: value, precio_unitario: lastPrice ? String(lastPrice) : repair.precio_unitario };
+          return { ...repair, inventario_item_id: value };
         }
         return { ...repair, [field]: value };
       });
@@ -558,7 +544,11 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
                           ))}
                         </select>
                         <input
-                          className="repair-row-price"
+                          className={`repair-row-price${
+                            repair.reparacion_id && !repair.inventario_item_id && !repair.precio_unitario
+                              ? " repair-row-price-prompt"
+                              : ""
+                          }`}
                           inputMode="numeric"
                           value={repair.precio_unitario}
                           onChange={(event) => updateRepair(index, "precio_unitario", event.target.value.replace(/\D/g, ""))}

@@ -2288,6 +2288,15 @@ tr:hover td {
 
 .repair-row-price {
   min-width: 0;
+  transition: box-shadow 0.35s ease, border-color 0.35s ease, background-color 0.35s ease;
+}
+
+/* Resalte sutil morado al elegir una reparacion sin precio: invita a escribir
+   el valor. Se desvanece al escribir o al seleccionar un tipo. */
+.repair-row-price-prompt {
+  border-color: var(--brand);
+  background-color: var(--panel-soft);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 .repair-row-action {
