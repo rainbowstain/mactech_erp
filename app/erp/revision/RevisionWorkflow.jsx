@@ -41,31 +41,18 @@ function calcTotals(serviceTotal, discount, fallbackTotal = 0) {
   };
 }
 
-export default function RevisionWorkflow({ order, services, workshopItems = [], canEditCosts = false }) {
+export default function RevisionWorkflow({ order, workshopItems = [], canEditCosts = false }) {
   const router = useRouter();
   const [diagnosis, setDiagnosis] = useState(DEFAULT_CLOSE_NOTE);
   const [estado, setEstado] = useState(String(order.estado >= 5 ? order.estado : Math.max(2, order.estado || 2)));
   const [metodopago, setMetodopago] = useState(order.metodopago || "");
   const [descuento, setDescuento] = useState(toInt(order.descuento));
-  const [selectedService, setSelectedService] = useState("");
-  const [selectedPart, setSelectedPart] = useState("");
-  const [createService, setCreateService] = useState(false);
-  const [newServiceName, setNewServiceName] = useState("");
-  const [newServicePrice, setNewServicePrice] = useState("");
+  const [partQuery, setPartQuery] = useState("");
+  const [partOpen, setPartOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingCosts, setSavingCosts] = useState(false);
-  const [serviceRows, setServiceRows] = useState(() =>
-    (order.services || []).map((service) => ({
-      key: `linked-${service.id}`,
-      id: service.servicio_id,
-      servicio_id: service.servicio_id,
-      nombre: service.nombre,
-      precio: toInt(service.precio),
-      isNew: false,
-    }))
-  );
-  const [partRows, setPartRows] = useState(() =>
-    (order.repuestos || []).map((part) => ({
+  const [partRows, setPartRows] = useState(() => {
+    const saved = (order.repuestos || []).map((part) => ({
       key: `part-${part.id}`,
       id: part.id,
       inventario_item_id: part.inventario_item_id,
@@ -74,21 +61,50 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
       cantidad: toInt(part.cantidad) || 1,
       costo_unitario: toInt(part.costo_unitario),
       precio_unitario: toInt(part.precio_unitario),
-    }))
-  );
+    }));
+    // Si la orden ya esta cerrada o ya tiene repuestos guardados, respetamos esa lista
+    // (incluye eventuales generales que el tecnico haya borrado en su momento).
+    if (saved.length || Number(order.estado) >= 5) return saved;
+    // Primera revision: precargamos los items generales (diagnostico, reparacion placa,
+    // etc.) con su precio general; quedan editables y se pueden quitar.
+    return workshopItems
+      .filter((item) => item.es_general && Number(item.estado) === 1)
+      .map((item) => ({
+        key: `gen-${item.id}`,
+        isNew: true,
+        inventario_item_id: item.id,
+        producto: item.producto,
+        marca: item.marca,
+        cantidad: 1,
+        costo_unitario: toInt(item.valor_original),
+        precio_unitario: toInt(item.ultimo_precio_venta || item.valor_venta),
+        stock: toInt(item.cantidad),
+      }));
+  });
 
   const isClosed = Number(order.estado) >= 5;
-  const serviceTotal = useMemo(
-    () => serviceRows.reduce((sum, service) => sum + toInt(service.precio), 0),
-    [serviceRows]
-  );
+  const partMatches = useMemo(() => {
+    const q = partQuery.trim().toLowerCase();
+    const active = workshopItems.filter((item) => Number(item.estado) === 1);
+    const base = q
+      ? active.filter((item) =>
+          [item.producto, item.marca, item.repuesto_nombre]
+            .filter(Boolean)
+            .some((field) => field.toLowerCase().includes(q))
+        )
+      : active;
+    // Generales primero, luego por nombre.
+    return [...base]
+      .sort((a, b) => Number(Boolean(b.es_general)) - Number(Boolean(a.es_general)) || (a.producto || "").localeCompare(b.producto || ""))
+      .slice(0, 40);
+  }, [workshopItems, partQuery]);
   const partsTotal = useMemo(
     () => partRows.reduce((sum, part) => sum + toInt(part.precio_unitario) * toInt(part.cantidad), 0),
     [partRows]
   );
   const totals = useMemo(
-    () => calcTotals(serviceTotal + partsTotal, descuento, order.total_recepcion),
-    [serviceTotal, partsTotal, descuento, order.total_recepcion]
+    () => calcTotals(partsTotal, descuento, order.total_recepcion),
+    [partsTotal, descuento, order.total_recepcion]
   );
   const displayTotals = isClosed
     ? {
@@ -98,53 +114,8 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
       }
     : totals;
 
-  function addSelectedService() {
-    const id = Number(selectedService);
-    const service = services.find((item) => Number(item.id) === id);
-    if (!service) return;
-
-    setServiceRows((current) => {
-      if (current.some((row) => Number(row.servicio_id || row.id) === id)) return current;
-      return [
-        ...current,
-        {
-          key: `service-${id}-${Date.now()}`,
-          id,
-          servicio_id: id,
-          nombre: service.nombre,
-          precio: toInt(service.precio),
-          isNew: true,
-        },
-      ];
-    });
-    setSelectedService("");
-  }
-
-  function addManualService() {
-    const name = newServiceName.trim();
-    const price = toInt(newServicePrice);
-    if (!name || !price) {
-      notifyWarning("Ingresa nombre y valor del servicio.");
-      return;
-    }
-
-    setServiceRows((current) => [
-      ...current,
-      {
-        key: `manual-${Date.now()}`,
-        id: null,
-        servicio_id: null,
-        nombre: name,
-        precio: price,
-        isNew: true,
-      },
-    ]);
-    setNewServiceName("");
-    setNewServicePrice("");
-  }
-
-  function addSelectedPart() {
-    const id = Number(selectedPart);
+  function addPart(itemId) {
+    const id = Number(itemId);
     const item = workshopItems.find((part) => Number(part.id) === id);
     if (!item) return;
 
@@ -173,7 +144,8 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
         },
       ];
     });
-    setSelectedPart("");
+    setPartQuery("");
+    setPartOpen(false);
   }
 
   function updatePart(key, patch) {
@@ -187,10 +159,6 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
         return next;
       })
     );
-  }
-
-  function removeNewService(key) {
-    setServiceRows((current) => current.filter((service) => service.key !== key || !service.isNew));
   }
 
   async function saveCostCorrection() {
@@ -240,9 +208,8 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
           action,
           estado: action === "close" ? 5 : Number(estado),
           observacion: diagnosis,
-          services: serviceRows.filter((service) => service.isNew),
           repuestos: partRows,
-          serviceTotal: serviceTotal + partsTotal,
+          serviceTotal: partsTotal,
           descuento,
           metodopago,
         }),
@@ -258,10 +225,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
         return;
       }
 
-      // Ya quedaron persistidos: dejan de ser "nuevos" para no reinsertarlos
-      // en un guardado posterior (evita duplicar servicios manuales).
-      setServiceRows((rows) => rows.map((row) => ({ ...row, isNew: false })));
-      notifySuccess("Diagnostico y servicios guardados.");
+      notifySuccess("Diagnostico y repuestos guardados.");
       setDiagnosis(DEFAULT_CLOSE_NOTE);
       router.refresh();
     } catch (error) {
@@ -382,84 +346,51 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
           </div>
 
           <div className="revision-editor-column revision-services-panel">
-            {!isClosed ? (
-              <>
-                <label className="legacy-field">
-                  <span>Ingresar Servicio:</span>
-                  <div className="legacy-input-button">
-                    <select value={selectedService} onChange={(event) => setSelectedService(event.target.value)}>
-                      <option value="">Seleccione Servicio</option>
-                      {services.map((service) => (
-                        <option key={service.id} value={service.id}>
-                          {service.nombre} - {formatMoney(service.precio)}
-                        </option>
-                      ))}
-                    </select>
-                    <button className="legacy-plus" type="button" onClick={addSelectedService}>
-                      +
-                    </button>
-                  </div>
-                </label>
-                <label className="revision-create-service">
-                  <input
-                    type="checkbox"
-                    checked={createService}
-                    onChange={(event) => setCreateService(event.target.checked)}
-                  />
-                  <span>Crear Servicio</span>
-                </label>
-                {createService ? (
-                  <div className="revision-new-service">
-                    <label className="legacy-field">
-                      <span>Nombre servicio:</span>
-                      <input value={newServiceName} onChange={(event) => setNewServiceName(event.target.value)} />
-                    </label>
-                    <label className="legacy-field">
-                      <span>Valor servicio:</span>
-                      <input
-                        inputMode="numeric"
-                        value={newServicePrice}
-                        onChange={(event) => setNewServicePrice(event.target.value.replace(/\D/g, ""))}
-                      />
-                    </label>
-                    <button className="btn-dark-legacy revision-insert-service" type="button" onClick={addManualService}>
-                      Insertar Servicio
-                    </button>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-
-            <div className="revision-service-list">
-              {serviceRows.map((service) => (
-                <div className="revision-service-row" key={service.key}>
-                  <span>{textOrDash(service.nombre)}</span>
-                  <strong>{formatMoney(service.precio)}</strong>
-                  {service.isNew && !isClosed ? (
-                    <button type="button" onClick={() => removeNewService(service.key)} aria-label="Quitar servicio">
-                      x
-                    </button>
-                  ) : null}
-                </div>
-              ))}
-              {!serviceRows.length ? <div className="empty-state compact-empty">Sin servicios ingresados.</div> : null}
-            </div>
-
             {(!isClosed || canEditCosts) ? (
               <label className="legacy-field">
-                <span>{isClosed ? "Agregar repuesto (corrección):" : "Repuestos Taller:"}</span>
-                <div className="legacy-input-button">
-                  <select value={selectedPart} onChange={(event) => setSelectedPart(event.target.value)}>
-                    <option value="">Seleccione Repuesto</option>
-                    {workshopItems.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.producto} - {formatMoney(item.valor_venta)} - Stock {item.cantidad}
-                      </option>
-                    ))}
-                  </select>
-                  <button className="legacy-plus" type="button" onClick={addSelectedPart}>
-                    +
-                  </button>
+                <span>{isClosed ? "Agregar repuesto (corrección):" : "Repuestos:"}</span>
+                <div className="model-combo">
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Buscar repuesto (batería, pantalla, diagnóstico…)"
+                    value={partQuery}
+                    onChange={(event) => {
+                      setPartQuery(event.target.value);
+                      setPartOpen(true);
+                    }}
+                    onFocus={() => setPartOpen(true)}
+                    onBlur={() => setTimeout(() => setPartOpen(false), 150)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        if (partMatches[0]) addPart(partMatches[0].id);
+                      }
+                      if (event.key === "Escape") setPartOpen(false);
+                    }}
+                  />
+                  {partOpen ? (
+                    <ul className="model-combo-list">
+                      {partMatches.map((item) => (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              addPart(item.id);
+                            }}
+                          >
+                            {item.es_general ? "★ " : ""}
+                            {item.producto} · {formatMoney(item.ultimo_precio_venta || item.valor_venta)}
+                            {item.es_general ? " · general" : ` · stock ${item.cantidad}`}
+                          </button>
+                        </li>
+                      ))}
+                      {!partMatches.length ? (
+                        <li className="model-combo-empty">Sin resultados</li>
+                      ) : null}
+                    </ul>
+                  ) : null}
                 </div>
               </label>
             ) : null}
@@ -526,7 +457,7 @@ export default function RevisionWorkflow({ order, services, workshopItems = [], 
               disabled={saving}
               onClick={() => saveRevision("save")}
             >
-              {saving ? "Guardando..." : "Guardar Diagnostico y Servicios"}
+              {saving ? "Guardando..." : "Guardar Diagnostico y Repuestos"}
             </button>
           </div>
         ) : null}

@@ -52,7 +52,6 @@ export async function POST(request, { params }) {
   // La nota de cierre ya viene pre-escrita y editable desde el formulario.
   // Solo guardamos lo que el usuario deja escrito (puede borrarla).
   const observacion = asNullableText(body.observacion);
-  const services = Array.isArray(body.services) ? body.services : [];
   const repuestos = Array.isArray(body.repuestos) ? body.repuestos : [];
   const metodopago = asNullableText(body.metodopago);
 
@@ -88,56 +87,6 @@ export async function POST(request, { params }) {
           `,
           [orderId, session.name || session.email, action === "close" ? 5 : estado, observacion, warrantyId]
         );
-      }
-
-      for (const service of services) {
-        if (!service.isNew && !service.nuevo) continue;
-
-        let serviceId = asPositiveInt(service.servicio_id || service.id);
-        if (!serviceId) {
-          const serviceName = asText(service.nombre);
-          if (!serviceName) continue;
-
-          // Evita triplicado: si esta orden ya tiene un servicio con ese nombre,
-          // no creamos otro servicio ni otro vínculo (cada guardado reenvía los
-          // manuales con servicio_id nulo, lo que generaba duplicados).
-          const dup = await db.query(
-            `
-              select ohs.id
-              from orden_has_servicios ohs
-              join servicios s on s.id = ohs.servicio_id
-              where ohs.orden_id = $1 and lower(trim(s.nombre)) = lower(trim($2))
-              limit 1
-            `,
-            [orderId, serviceName]
-          );
-          if (dup.rows[0]) continue;
-
-          const insertedService = await db.query(
-            `
-              insert into servicios (nombre, precio, estado)
-              values ($1, $2, 1)
-              returning id
-            `,
-            [serviceName, asInt(service.precio)]
-          );
-          serviceId = insertedService.rows[0].id;
-        }
-
-        const existing = await db.query(
-          "select id from orden_has_servicios where orden_id = $1 and servicio_id = $2 limit 1",
-          [orderId, serviceId]
-        );
-
-        if (!existing.rows[0]) {
-          await db.query(
-            `
-              insert into orden_has_servicios (orden_id, servicio_id, responsable, garantia_id, created_at)
-              values ($1, $2, $3, $4, now())
-            `,
-            [orderId, serviceId, session.name || session.email, warrantyId]
-          );
-        }
       }
 
       await db.query("alter table inventario_items add column if not exists ultimo_precio_venta integer");
@@ -193,7 +142,9 @@ export async function POST(request, { params }) {
           );
         }
 
-        if (action === "close") {
+        // Los items generales (ex-servicios: diagnostico, reparacion placa, etc.) no
+        // tienen stock fisico; no se descuentan ni generan movimiento de inventario.
+        if (action === "close" && !item.es_general) {
           const previous = Number(item.cantidad || 0);
           const next = previous - quantity; // permitimos negativo: marca el faltante por contar
           await db.query("update inventario_items set cantidad = $1, updated_at = now() where id = $2", [next, itemId]);

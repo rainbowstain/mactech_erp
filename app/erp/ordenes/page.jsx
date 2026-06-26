@@ -5,7 +5,7 @@ import WorkOrderForm from "../ordentrabajo/WorkOrderForm";
 import RevisionWorkflow from "../revision/RevisionWorkflow";
 import { formatDateTime, textOrDash } from "@/lib/format";
 import { getInventoryItems } from "@/lib/inventory";
-import { getDevices, getDeviceStates, getEquipment, getParts, getQuestions, getServices } from "@/lib/maintainers";
+import { getDevices, getDeviceStates, getEquipment, getParts, getQuestions } from "@/lib/maintainers";
 import { getClosedOrders, getOrder, getOrders, getReviewOrders } from "@/lib/orders";
 import { getUsers, canDeleteOrders } from "@/lib/users";
 import { readSession } from "@/lib/auth";
@@ -151,18 +151,17 @@ export default async function OrdersPage({ searchParams }) {
     const hasSearch = Boolean(id || run || nombre);
     const orders = hasSearch ? await getReviewOrders({ id, run, nombre, limit: 120 }) : [];
     const selectedOrder = id && orders.length === 1 ? orders[0] : null;
-    const [fullOrder, services, workshopItems] = selectedOrder
+    const [fullOrder, workshopItems] = selectedOrder
       ? await Promise.all([
           getOrder(selectedOrder.id),
-          getServices(),
           getInventoryItems({ area: "taller", dispositivoId: selectedOrder.id_dispositivo }),
         ])
-      : [null, [], []];
+      : [null, []];
 
     content = (
       <>
         <ReviewSearch id={id} run={run} nombre={nombre} hasSearch={hasSearch} orders={orders} />
-        {fullOrder ? <RevisionWorkflow order={fullOrder} services={services} workshopItems={workshopItems} canEditCosts={canDelete} /> : null}
+        {fullOrder ? <RevisionWorkflow order={fullOrder} workshopItems={workshopItems} canEditCosts={canDelete} /> : null}
       </>
     );
   }

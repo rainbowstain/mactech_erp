@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Shell from "../Shell";
 import MaintainerTable from "./MaintainerTable";
-import { getClients, getDevices, getEquipment, getParts, getQuestions, getServices } from "@/lib/maintainers";
+import { getClients, getDevices, getEquipment, getParts, getQuestions } from "@/lib/maintainers";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,6 @@ const RESOURCE_TABS = [
   { key: "equipos", label: "Marcas" },
   { key: "dispositivos", label: "Modelos" },
   { key: "repuestos", label: "Repuestos" },
-  { key: "servicios", label: "Servicios" },
   { key: "preguntas", label: "Preguntas" },
 ];
 
@@ -78,22 +77,6 @@ function getResourceConfig(type, equipment = []) {
         { key: "estado", label: "Estado", type: "status", align: "center" },
       ],
     },
-    servicios: {
-      title: "Servicios",
-      addLabel: "Agregar Servicio",
-      fields: [
-        { key: "nombre", label: "Nombre", required: true },
-        { key: "precio", label: "Precio", type: "money", defaultValue: 0 },
-        { key: "costo", label: "Costo", type: "money", defaultValue: 0 },
-        { key: "estado", label: "Estado", type: "status", defaultValue: 1 },
-      ],
-      columns: [
-        { key: "nombre", label: "Nombre" },
-        { key: "precio", label: "Precio", type: "money" },
-        { key: "costo", label: "Costo", type: "money" },
-        { key: "estado", label: "Estado", type: "status", align: "center" },
-      ],
-    },
     preguntas: {
       title: "Preguntas",
       addLabel: "Agregar Pregunta",
@@ -114,7 +97,6 @@ async function getRows(type, search) {
   if (type === "equipos") return getEquipment({ search });
   if (type === "dispositivos") return getDevices({ search });
   if (type === "repuestos") return getParts({ search });
-  if (type === "servicios") return getServices({ search });
   if (type === "preguntas") return getQuestions({ search });
   return getClients({ search });
 }
