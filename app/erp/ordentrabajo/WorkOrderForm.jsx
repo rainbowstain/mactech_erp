@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { notifySuccess, notifyWarning } from "@/lib/notify";
 
+// "Diagnóstico" se ordena siempre primero en la lista de reparaciones. El precio
+// ya no se autocompleta (desde v1.5.7); este helper sólo afecta el orden.
+const isDiagnostico = (nombre) => /^\s*diagn[oó]stico/i.test(nombre || "");
+
 function nowForInput() {
   const date = new Date();
   date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
