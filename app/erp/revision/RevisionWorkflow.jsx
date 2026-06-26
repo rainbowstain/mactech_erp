@@ -411,7 +411,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
 
             <div className="revision-service-list">
               {partRows.map((part) => (
-                <div className="revision-part-row" key={part.key}>
+                <div className={`revision-part-row${isClosed && canEditCosts ? " revision-part-row--cost" : ""}`} key={part.key}>
                   <span title={textOrDash(part.producto)}>{textOrDash(part.producto)}</span>
                   <input
                     inputMode="numeric"

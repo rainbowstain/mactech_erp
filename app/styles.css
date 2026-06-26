@@ -2079,6 +2079,17 @@ tr:hover td {
   background: linear-gradient(180deg, #fff, #f8fafc);
 }
 
+/* Vista de correccion (OT cerrada): suma la columna de costo, por eso necesita
+   6 columnas; si no, el total y la "x" se salen por la derecha. */
+.revision-part-row--cost {
+  grid-template-columns: minmax(0, 1fr) 54px 82px 82px auto 28px;
+}
+
+.revision-part-row strong {
+  justify-self: end;
+  white-space: nowrap;
+}
+
 .dark-mode .revision-part-row {
   border-color: rgba(255, 255, 255, 0.1);
   background: linear-gradient(180deg, #1c2026, #17191d);
