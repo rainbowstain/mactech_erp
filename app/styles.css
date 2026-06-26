@@ -2406,6 +2406,70 @@ tr:hover td {
   font-size: 0.82rem;
 }
 
+/* Buscador de repuestos (lista en flujo, no flotante: evita que el ancestro
+   con overflow:hidden la recorte y que tape/robe clics a las filas de abajo). */
+.part-search {
+  position: relative;
+  min-width: 0;
+}
+
+.part-search-list {
+  margin: 6px 0 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 2px rgba(29, 41, 57, 0.05);
+}
+
+.part-search-list li {
+  margin: 0;
+}
+
+.part-search-list li button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.part-search-list li button:hover {
+  background: color-mix(in srgb, var(--brand) 16%, transparent);
+}
+
+.part-search-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.part-search-meta {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.part-search-empty {
+  padding: 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 /* Modal: agregar marca / modelo */
 .wo-modal-overlay {
   position: fixed;

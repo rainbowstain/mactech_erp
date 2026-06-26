@@ -21,6 +21,15 @@ function toInt(value) {
   return Number.isFinite(number) ? Math.max(0, Math.round(number)) : 0;
 }
 
+// Algunos items generales migrados quedaron con nombres basura (p.ej. "123").
+// Los ocultamos al usuario: un repuesto valido tiene nombre con letras.
+function isHiddenItem(item) {
+  const name = String(item?.producto || "").trim();
+  if (!name) return true;
+  if (!/[a-zá-úñ]/i.test(name)) return true; // solo numeros/simbolos => basura
+  return false;
+}
+
 function ReadonlyField({ label, value }) {
   return (
     <label className="legacy-field">
@@ -68,7 +77,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
     // Primera revision: precargamos los items generales (diagnostico, reparacion placa,
     // etc.) con su precio general; quedan editables y se pueden quitar.
     return workshopItems
-      .filter((item) => item.es_general && Number(item.estado) === 1)
+      .filter((item) => item.es_general && Number(item.estado) === 1 && !isHiddenItem(item))
       .map((item) => ({
         key: `gen-${item.id}`,
         isNew: true,
@@ -85,7 +94,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
   const isClosed = Number(order.estado) >= 5;
   const partMatches = useMemo(() => {
     const q = partQuery.trim().toLowerCase();
-    const active = workshopItems.filter((item) => Number(item.estado) === 1);
+    const active = workshopItems.filter((item) => Number(item.estado) === 1 && !isHiddenItem(item));
     const base = q
       ? active.filter((item) =>
           [item.producto, item.marca, item.repuesto_nombre]
@@ -349,7 +358,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
             {(!isClosed || canEditCosts) ? (
               <label className="legacy-field">
                 <span>{isClosed ? "Agregar repuesto (corrección):" : "Repuestos:"}</span>
-                <div className="model-combo">
+                <div className="part-search">
                   <input
                     type="text"
                     autoComplete="off"
@@ -360,7 +369,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
                       setPartOpen(true);
                     }}
                     onFocus={() => setPartOpen(true)}
-                    onBlur={() => setTimeout(() => setPartOpen(false), 150)}
+                    onBlur={() => setTimeout(() => setPartOpen(false), 200)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
@@ -370,7 +379,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
                     }}
                   />
                   {partOpen ? (
-                    <ul className="model-combo-list">
+                    <ul className="part-search-list">
                       {partMatches.map((item) => (
                         <li key={item.id}>
                           <button
@@ -380,14 +389,19 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
                               addPart(item.id);
                             }}
                           >
-                            {item.es_general ? "★ " : ""}
-                            {item.producto} · {formatMoney(item.ultimo_precio_venta || item.valor_venta)}
-                            {item.es_general ? " · general" : ` · stock ${item.cantidad}`}
+                            <span className="part-search-name">
+                              {item.es_general ? "• " : ""}
+                              {item.producto}
+                            </span>
+                            <span className="part-search-meta">
+                              {formatMoney(item.ultimo_precio_venta || item.valor_venta)}
+                              {item.es_general ? " · general" : ` · stock ${item.cantidad}`}
+                            </span>
                           </button>
                         </li>
                       ))}
                       {!partMatches.length ? (
-                        <li className="model-combo-empty">Sin resultados</li>
+                        <li className="part-search-empty">Sin resultados</li>
                       ) : null}
                     </ul>
                   ) : null}
