@@ -67,6 +67,7 @@ export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = f
     <DataTable
       rows={orders}
       emptyMessage="No hay ordenes para mostrar."
+      hideSearch
       columns={[
         {
           key: "id",

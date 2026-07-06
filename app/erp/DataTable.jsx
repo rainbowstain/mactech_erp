@@ -49,6 +49,8 @@ export default function DataTable({
   initialPageSize = 25,
   rowKey = "id",
   toolbar,
+  // Oculta el buscador propio de la tabla cuando la pagina ya trae uno (evita duplicados).
+  hideSearch = false,
   // Modo servidor (opcional): filtros/búsqueda/paginación controlados por el padre.
   server = false,
   total = 0,
@@ -165,7 +167,7 @@ export default function DataTable({
   return (
     <div className="data-table-shell">
       <div className="data-table-toolbar">
-        {server ? (
+        {server || hideSearch ? (
           <span />
         ) : (
           <label className="data-table-search">
