@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
@@ -12,9 +12,26 @@ function orderReviewHref(orderId) {
   return `/erp/ordenes?tab=revision&id=${orderId}`;
 }
 
+function uniqueOptions(orders, getValue) {
+  const seen = new Map();
+  orders.forEach((order) => {
+    const value = getValue(order);
+    if (value) seen.set(value, value);
+  });
+  return Array.from(seen.values())
+    .sort((a, b) => a.localeCompare(b, "es"))
+    .map((value) => ({ value, label: value }));
+}
+
 export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = false }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState(null);
+
+  const estadoOptions = useMemo(
+    () => uniqueOptions(orders, (order) => order.estado_nombre || order.estado),
+    [orders]
+  );
+  const modeloOptions = useMemo(() => uniqueOptions(orders, (order) => order.dispositivo_nombre), [orders]);
 
   async function handleDelete(order) {
     const ok = await confirmAction({
@@ -75,7 +92,10 @@ export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = f
         {
           key: "marca",
           label: "Marca",
+          filterLabel: "Modelo",
           value: (order) => `${order.equipo_nombre || ""} ${order.dispositivo_nombre || ""}`,
+          filterOptions: modeloOptions,
+          filterSearchable: true,
           render: (order) => (
             <>
               {textOrDash(order.equipo_nombre)}
@@ -87,10 +107,29 @@ export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = f
           key: "estado",
           label: "Estado",
           value: (order) => order.estado_nombre || order.estado,
+          filterOptions: estadoOptions,
           render: (order) => <span className="pill">{textOrDash(order.estado_nombre || order.estado)}</span>,
         },
-        { key: "fecha", label: "Fecha", value: (order) => formatDate(order.created_at || order.fecha_entrega) },
-        { key: "total", label: "Total", value: (order) => formatMoney(order.total), render: (order) => formatMoney(order.total) },
+        {
+          key: "fecha",
+          label: "Fecha",
+          value: (order) => formatDate(order.created_at || order.fecha_entrega),
+          filterType: "date",
+          dateValue: (order) => order.created_at || order.fecha_entrega,
+          sortable: true,
+          sortValue: (order) => new Date(order.created_at || order.fecha_entrega || 0).getTime(),
+          sortLabels: { asc: "Fecha (más antigua)", desc: "Fecha (más reciente)" },
+        },
+        {
+          key: "total",
+          label: "Total",
+          filter: false,
+          value: (order) => formatMoney(order.total),
+          render: (order) => formatMoney(order.total),
+          sortable: true,
+          sortValue: (order) => Number(order.total) || 0,
+          sortLabels: { asc: "Menor a mayor valor", desc: "Mayor a menor valor" },
+        },
         {
           key: "action",
           label: "Accion",

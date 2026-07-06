@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
 import { textOrDash } from "@/lib/format";
 import Combobox from "./Combobox";
 
@@ -15,6 +15,25 @@ function normalize(value) {
 function columnValue(column, row) {
   if (column.value) return column.value(row);
   return row[column.key];
+}
+
+function dateValue(column, row) {
+  const raw = column.dateValue ? column.dateValue(row) : columnValue(column, row);
+  const time = new Date(raw).getTime();
+  return Number.isNaN(time) ? null : time;
+}
+
+function sortValue(column, row) {
+  return column.sortValue ? column.sortValue(row) : columnValue(column, row);
+}
+
+function compareValues(a, b) {
+  const numA = typeof a === "number" ? a : Number(a);
+  const numB = typeof b === "number" ? b : Number(b);
+  if (a !== "" && b !== "" && a != null && b != null && !Number.isNaN(numA) && !Number.isNaN(numB)) {
+    return numA - numB;
+  }
+  return String(a ?? "").localeCompare(String(b ?? ""), "es");
 }
 
 function alignClass(align) {
@@ -44,6 +63,8 @@ export default function DataTable({
   const [clientFilters, setClientFilters] = useState({});
   const [clientPage, setClientPage] = useState(1);
   const [clientPageSize, setClientPageSize] = useState(initialPageSize);
+  const [clientSort, setClientSort] = useState({ key: null, direction: "asc" });
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const filters = server ? serverFilters || {} : clientFilters;
   const pageSize = server ? serverPageSize || initialPageSize : clientPageSize;
@@ -56,10 +77,12 @@ export default function DataTable({
     return true;
   });
 
+  const sortableColumns = server ? [] : columns.filter((column) => column.sortable);
+
   const filteredRows = useMemo(() => {
     if (server) return rows;
     const cleanQuery = normalize(query);
-    return rows.filter((row) => {
+    const result = rows.filter((row) => {
       if (cleanQuery) {
         const haystack = columns.map((column) => columnValue(column, row)).join(" ");
         if (!normalize(haystack).includes(cleanQuery)) return false;
@@ -69,17 +92,37 @@ export default function DataTable({
         if (!value) continue;
         const column = columns.find((item) => item.key === key);
         if (!column) continue;
+        if (column.filterType === "date") {
+          const time = dateValue(column, row);
+          if (value.from && (time == null || time < new Date(value.from).getTime())) return false;
+          if (value.to && (time == null || time > new Date(value.to).getTime() + 86399999)) return false;
+          continue;
+        }
         if (!normalize(columnValue(column, row)).includes(normalize(value))) return false;
       }
 
       return true;
     });
-  }, [columns, clientFilters, query, rows, server]);
+
+    if (clientSort.key) {
+      const column = columns.find((item) => item.key === clientSort.key);
+      if (column) {
+        const factor = clientSort.direction === "desc" ? -1 : 1;
+        result.sort((a, b) => factor * compareValues(sortValue(column, a), sortValue(column, b)));
+      }
+    }
+
+    return result;
+  }, [columns, clientFilters, clientSort, query, rows, server]);
 
   const totalRows = server ? total : filteredRows.length;
   const pageCount = Math.max(1, Math.ceil(totalRows / pageSize));
   const safePage = server ? Math.min(serverPage || 1, pageCount) : Math.min(clientPage, pageCount);
   const visibleRows = server ? rows : filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const activeFilterCount =
+    Object.values(filters).filter((value) => (value && typeof value === "object" ? value.from || value.to : value))
+      .length + (clientSort.key ? 1 : 0);
 
   function updateFilter(key, value) {
     if (server) {
@@ -87,6 +130,18 @@ export default function DataTable({
       return;
     }
     setClientFilters((current) => ({ ...current, [key]: value }));
+    setClientPage(1);
+  }
+
+  function updateDateFilter(key, part, value) {
+    const current = filters[key] || {};
+    updateFilter(key, { ...current, [part]: value });
+  }
+
+  function clearAllFilters() {
+    filterableColumns.forEach((column) => updateFilter(column.key, column.filterType === "date" ? {} : ""));
+    setClientSort({ key: null, direction: "asc" });
+    setQuery("");
     setClientPage(1);
   }
 
@@ -127,6 +182,18 @@ export default function DataTable({
         )}
         <div className="data-table-actions">
           {toolbar}
+          {filterableColumns.length || sortableColumns.length ? (
+            <button
+              type="button"
+              className={`ghost-button compact-button data-table-filter-toggle${filtersOpen ? " is-active" : ""}`}
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+            >
+              <SlidersHorizontal size={15} aria-hidden="true" />
+              Filtros
+              {activeFilterCount ? <span className="data-table-filter-badge">{activeFilterCount}</span> : null}
+            </button>
+          ) : null}
           <select
             value={pageSize}
             onChange={(event) => changePageSize(Number(event.target.value))}
@@ -141,35 +208,84 @@ export default function DataTable({
         </div>
       </div>
 
-      <div className="data-table-filters">
-        {filterableColumns.map((column) => (
-          <label key={column.key}>
-            <span>{column.label}</span>
-            {column.filterOptions && column.filterSearchable ? (
-              <Combobox
-                value={filters[column.key] || ""}
-                options={column.filterOptions}
-                onChange={(value) => updateFilter(column.key, value)}
-              />
-            ) : column.filterOptions ? (
-              <select value={filters[column.key] || ""} onChange={(event) => updateFilter(column.key, event.target.value)}>
-                <option value="">Todos</option>
-                {column.filterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
+      {filtersOpen ? (
+        <div className="data-table-filters">
+          {sortableColumns.length ? (
+            <label>
+              <span>Ordenar por</span>
+              <select
+                value={clientSort.key ? `${clientSort.key}:${clientSort.direction}` : ""}
+                onChange={(event) => {
+                  const [key, direction] = event.target.value ? event.target.value.split(":") : [null, "asc"];
+                  setClientSort({ key, direction: direction || "asc" });
+                }}
+              >
+                <option value="">Sin ordenar</option>
+                {sortableColumns.map((column) => (
+                  <optgroup key={column.key} label={column.filterLabel || column.label}>
+                    <option value={`${column.key}:asc`}>
+                      {column.sortLabels?.asc || `${column.filterLabel || column.label} (menor a mayor)`}
+                    </option>
+                    <option value={`${column.key}:desc`}>
+                      {column.sortLabels?.desc || `${column.filterLabel || column.label} (mayor a menor)`}
+                    </option>
+                  </optgroup>
                 ))}
               </select>
-            ) : (
-              <input
-                value={filters[column.key] || ""}
-                onChange={(event) => updateFilter(column.key, event.target.value)}
-                placeholder="Filtrar"
-              />
-            )}
-          </label>
-        ))}
-      </div>
+            </label>
+          ) : null}
+
+          {filterableColumns.map((column) => (
+            <label key={column.key} className={column.filterType === "date" ? "data-table-filter-date" : undefined}>
+              <span>{column.filterLabel || column.label}</span>
+              {column.filterType === "date" ? (
+                <div className="data-table-date-range">
+                  <input
+                    type="date"
+                    value={filters[column.key]?.from || ""}
+                    onChange={(event) => updateDateFilter(column.key, "from", event.target.value)}
+                    aria-label={`${column.filterLabel || column.label} desde`}
+                  />
+                  <input
+                    type="date"
+                    value={filters[column.key]?.to || ""}
+                    onChange={(event) => updateDateFilter(column.key, "to", event.target.value)}
+                    aria-label={`${column.filterLabel || column.label} hasta`}
+                  />
+                </div>
+              ) : column.filterOptions && column.filterSearchable ? (
+                <Combobox
+                  value={filters[column.key] || ""}
+                  options={column.filterOptions}
+                  onChange={(value) => updateFilter(column.key, value)}
+                />
+              ) : column.filterOptions ? (
+                <select value={filters[column.key] || ""} onChange={(event) => updateFilter(column.key, event.target.value)}>
+                  <option value="">Todos</option>
+                  {column.filterOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={filters[column.key] || ""}
+                  onChange={(event) => updateFilter(column.key, event.target.value)}
+                  placeholder="Filtrar"
+                />
+              )}
+            </label>
+          ))}
+
+          {activeFilterCount ? (
+            <button type="button" className="data-table-filter-clear" onClick={clearAllFilters}>
+              <X size={13} aria-hidden="true" />
+              Limpiar filtros
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="table-wrap data-table-wrap">
         <table>

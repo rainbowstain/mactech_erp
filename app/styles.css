@@ -991,6 +991,7 @@ button:disabled {
 .data-table-filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: end;
   gap: 10px;
   padding: 12px 16px;
   border-top: 1px solid var(--line);
@@ -1007,6 +1008,77 @@ button:disabled {
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.data-table-filters label.data-table-filter-date {
+  grid-column: span 2;
+}
+
+.data-table-date-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.data-table-date-range input {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 8px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.data-table-filter-toggle {
+  position: relative;
+}
+
+.data-table-filter-toggle.is-active {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}
+
+.data-table-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.data-table-filter-toggle.is-active .data-table-filter-badge {
+  background: #fff;
+  color: var(--brand);
+}
+
+.data-table-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: end;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.data-table-filter-clear:hover {
+  border-color: var(--brand);
+  color: var(--brand);
 }
 
 .combobox {
