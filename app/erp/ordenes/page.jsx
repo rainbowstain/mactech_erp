@@ -179,17 +179,21 @@ export default async function OrdersPage({ searchParams }) {
     const hasSearch = Boolean(id || run || nombre);
     const orders = hasSearch ? await getReviewOrders({ id, run, nombre, limit: 120 }) : [];
     const selectedOrder = id && orders.length === 1 ? orders[0] : null;
-    const [fullOrder, workshopItems] = selectedOrder
+    const [fullOrder, workshopItems, equipment, devices] = selectedOrder
       ? await Promise.all([
           getOrder(selectedOrder.id),
           getInventoryItems({ area: "taller", dispositivoId: selectedOrder.id_dispositivo }),
+          getEquipment(),
+          getDevices(),
         ])
-      : [null, []];
+      : [null, [], [], []];
 
     content = (
       <>
         <ReviewSearch id={id} run={run} nombre={nombre} hasSearch={hasSearch} orders={orders} />
-        {fullOrder ? <RevisionWorkflow order={fullOrder} workshopItems={workshopItems} canEditCosts={canDelete} /> : null}
+        {fullOrder ? (
+          <RevisionWorkflow order={fullOrder} workshopItems={workshopItems} equipment={equipment} devices={devices} canEditCosts={canDelete} />
+        ) : null}
       </>
     );
   }

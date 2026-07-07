@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Edit3, Save, X } from "lucide-react";
 import { formatDate, formatDateTime, formatMoney, orderStatusPillClass, textOrDash } from "@/lib/format";
 import { notifySuccess, notifyWarning } from "@/lib/notify";
 import { formatRut } from "@/lib/rut";
@@ -41,6 +42,42 @@ function ReadonlyField({ label, value }) {
   );
 }
 
+function EditableField({ label, value, onChange, type = "text", placeholder }) {
+  return (
+    <label className="legacy-field">
+      <span>{label}:</span>
+      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+    </label>
+  );
+}
+
+// "yyyy-mm-dd" en horario local (no UTC), para que el input coincida con lo
+// que ya muestra formatDate() justo al lado en modo lectura.
+function toDateInputValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function buildDataDraft(order) {
+  return {
+    nombre: order.cliente_nombre || "",
+    run: formatRut(order.cliente_run) || "",
+    mail: order.cliente_mail || "",
+    fono: order.cliente_fono || "",
+    imei: order.imei || "",
+    codigo: order.codigo || "",
+    tecnico: order.tecnico || "",
+    fecha_entrega: toDateInputValue(order.fecha_entrega),
+    id_equipo: order.id_equipo ? String(order.id_equipo) : "",
+    id_dispositivo: order.id_dispositivo ? String(order.id_dispositivo) : "",
+  };
+}
+
 function calcTotals(serviceTotal, discount, fallbackTotal = 0) {
   const baseTotal = toInt(serviceTotal) > 0 ? toInt(serviceTotal) : toInt(fallbackTotal);
   const total = Math.max(0, baseTotal - toInt(discount));
@@ -52,7 +89,7 @@ function calcTotals(serviceTotal, discount, fallbackTotal = 0) {
   };
 }
 
-export default function RevisionWorkflow({ order, workshopItems = [], canEditCosts = false }) {
+export default function RevisionWorkflow({ order, workshopItems = [], equipment = [], devices = [], canEditCosts = false }) {
   const router = useRouter();
   const [diagnosis, setDiagnosis] = useState(DEFAULT_CLOSE_NOTE);
   const [estado, setEstado] = useState(String(order.estado >= 5 ? order.estado : Math.max(2, order.estado || 2)));
@@ -62,6 +99,9 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
   const [partOpen, setPartOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingCosts, setSavingCosts] = useState(false);
+  const [editingData, setEditingData] = useState(false);
+  const [savingData, setSavingData] = useState(false);
+  const [dataDraft, setDataDraft] = useState(() => buildDataDraft(order));
   const [partRows, setPartRows] = useState(() => {
     const saved = (order.repuestos || []).map((part) => ({
       key: `part-${part.id}`,
@@ -94,6 +134,10 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
   });
 
   const isClosed = Number(order.estado) >= 5;
+  const dataDevices = useMemo(
+    () => devices.filter((device) => String(device.modelo) === String(dataDraft.id_equipo)),
+    [devices, dataDraft.id_equipo]
+  );
   const partMatches = useMemo(() => {
     const q = partQuery.trim().toLowerCase();
     const active = workshopItems.filter((item) => Number(item.estado) === 1 && !isHiddenItem(item));
@@ -170,6 +214,60 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
         return next;
       })
     );
+  }
+
+  function updateDataDraft(field, value) {
+    setDataDraft((current) => {
+      const next = { ...current, [field]: value };
+      if (field === "id_equipo") next.id_dispositivo = ""; // cambio de marca reinicia el modelo
+      if (field === "run") next.run = formatRut(value);
+      return next;
+    });
+  }
+
+  function openDataEdit() {
+    setDataDraft(buildDataDraft(order));
+    setEditingData(true);
+  }
+
+  function cancelDataEdit() {
+    setDataDraft(buildDataDraft(order));
+    setEditingData(false);
+  }
+
+  async function saveDataCorrection() {
+    setSavingData(true);
+    try {
+      const response = await fetch(`/api/erp/ordenes/${order.id}/datos`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cliente: {
+            nombre: dataDraft.nombre,
+            run: dataDraft.run,
+            mail: dataDraft.mail,
+            fono: dataDraft.fono,
+          },
+          orden: {
+            imei: dataDraft.imei,
+            codigo: dataDraft.codigo,
+            tecnico: dataDraft.tecnico,
+            fecha_entrega: dataDraft.fecha_entrega,
+            id_equipo: dataDraft.id_equipo,
+            id_dispositivo: dataDraft.id_dispositivo,
+          },
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || "No se pudo guardar la corrección.");
+      notifySuccess("Datos corregidos. Queda registrado en el historial interno.");
+      setEditingData(false);
+      router.refresh();
+    } catch (error) {
+      notifyWarning(error.message);
+    } finally {
+      setSavingData(false);
+    }
   }
 
   async function saveCostCorrection() {
@@ -263,25 +361,121 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
                 OT
               </Link>
             ) : null}
+            {!editingData ? (
+              <button className="action-button" type="button" onClick={openDataEdit} title="Corregir datos de intake">
+                <Edit3 size={15} aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
         </div>
         <div className="revision-order-title">
           <h2>Orden nº {order.id}</h2>
         </div>
+        {editingData ? (
+          <p className="revision-edit-hint">
+            Corrigiendo datos de ingreso — queda en el historial interno, no se imprime en la OT de salida.
+          </p>
+        ) : null}
         <div className="legacy-form-grid legacy-form-grid-three">
-          <ReadonlyField label="Run" value={formatRut(order.cliente_run)} />
-          <ReadonlyField label="Nombre" value={order.cliente_nombre} />
+          {editingData ? (
+            <EditableField label="Run" value={dataDraft.run} onChange={(value) => updateDataDraft("run", value)} placeholder="12.345.678-9" />
+          ) : (
+            <ReadonlyField label="Run" value={formatRut(order.cliente_run)} />
+          )}
+          {editingData ? (
+            <EditableField label="Nombre" value={dataDraft.nombre} onChange={(value) => updateDataDraft("nombre", value)} />
+          ) : (
+            <ReadonlyField label="Nombre" value={order.cliente_nombre} />
+          )}
           <ReadonlyField label="Fecha Ingreso" value={formatDateTime(order.created_at)} />
-          <ReadonlyField label="Telefono" value={order.cliente_fono} />
-          <ReadonlyField label="Mail" value={order.cliente_mail} />
-          <ReadonlyField label="Fecha Entrega" value={formatDate(order.fecha_entrega)} />
-          <ReadonlyField label="Marca" value={order.equipo_nombre} />
-          <ReadonlyField label="Modelo" value={order.dispositivo_nombre} />
-          <ReadonlyField label="IMEI" value={order.imei} />
-          <ReadonlyField label="Codigo" value={order.codigo} />
-          <ReadonlyField label="Tecnico" value={order.tecnico} />
+          {editingData ? (
+            <EditableField label="Telefono" value={dataDraft.fono} onChange={(value) => updateDataDraft("fono", value)} />
+          ) : (
+            <ReadonlyField label="Telefono" value={order.cliente_fono} />
+          )}
+          {editingData ? (
+            <EditableField label="Mail" value={dataDraft.mail} onChange={(value) => updateDataDraft("mail", value)} />
+          ) : (
+            <ReadonlyField label="Mail" value={order.cliente_mail} />
+          )}
+          {editingData ? (
+            <EditableField
+              label="Fecha Entrega"
+              type="date"
+              value={dataDraft.fecha_entrega}
+              onChange={(value) => updateDataDraft("fecha_entrega", value)}
+            />
+          ) : (
+            <ReadonlyField label="Fecha Entrega" value={formatDate(order.fecha_entrega)} />
+          )}
+          {editingData ? (
+            <label className="legacy-field">
+              <span>Marca:</span>
+              <select value={dataDraft.id_equipo} onChange={(event) => updateDataDraft("id_equipo", event.target.value)}>
+                <option value="">Seleccione</option>
+                {equipment.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <ReadonlyField label="Marca" value={order.equipo_nombre} />
+          )}
+          {editingData ? (
+            <label className="legacy-field">
+              <span>Modelo:</span>
+              <select
+                value={dataDraft.id_dispositivo}
+                onChange={(event) => updateDataDraft("id_dispositivo", event.target.value)}
+                disabled={!dataDraft.id_equipo}
+              >
+                <option value="">{dataDraft.id_equipo ? "Seleccione" : "Selecciona marca primero"}</option>
+                {dataDevices.map((device) => (
+                  <option key={device.id} value={device.id}>
+                    {device.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <ReadonlyField label="Modelo" value={order.dispositivo_nombre} />
+          )}
+          {editingData ? (
+            <EditableField label="IMEI" value={dataDraft.imei} onChange={(value) => updateDataDraft("imei", value)} />
+          ) : (
+            <ReadonlyField label="IMEI" value={order.imei} />
+          )}
+          {editingData ? (
+            <EditableField label="Codigo" value={dataDraft.codigo} onChange={(value) => updateDataDraft("codigo", value)} />
+          ) : (
+            <ReadonlyField label="Codigo" value={order.codigo} />
+          )}
+          {editingData ? (
+            <EditableField label="Tecnico" value={dataDraft.tecnico} onChange={(value) => updateDataDraft("tecnico", value)} />
+          ) : (
+            <ReadonlyField label="Tecnico" value={order.tecnico} />
+          )}
           <ReadonlyField label="Total" value={formatMoney(order.total)} />
         </div>
+        {editingData ? (
+          <div className="legacy-actions centered">
+            <button
+              className="primary-button inline-primary compact-button legacy-save"
+              type="button"
+              disabled={savingData}
+              onClick={saveDataCorrection}
+            >
+              <Save size={15} aria-hidden="true" />
+              {savingData ? "Guardando..." : "Guardar corrección"}
+            </button>
+            <button className="ghost-button compact-button" type="button" disabled={savingData} onClick={cancelDataEdit}>
+              <X size={15} aria-hidden="true" />
+              Cancelar
+            </button>
+          </div>
+        ) : null}
         <label className="legacy-field legacy-field-wide">
           <span>Observacion:</span>
           <textarea value={textOrDash(order.observacion)} readOnly rows={4} />
@@ -309,7 +503,15 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
                   <td>{index + 1}</td>
                   <td>{textOrDash(revision.responsable)}</td>
                   <td>{formatDateTime(revision.created_at)}</td>
-                  <td>{textOrDash(revision.nombre_estado)}</td>
+                  <td>
+                    {revision.es_interno ? (
+                      <span className="pill gray" title="No se imprime en la OT de salida">
+                        Corrección interna
+                      </span>
+                    ) : (
+                      textOrDash(revision.nombre_estado)
+                    )}
+                  </td>
                   <td>{textOrDash(revision.observacion)}</td>
                 </tr>
               ))}

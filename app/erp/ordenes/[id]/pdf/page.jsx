@@ -23,6 +23,10 @@ export default async function OrderPdfPage({ params }) {
 
   if (!order) notFound();
 
+  // Las correcciones de datos (ver boton "Editar" en revision) son control
+  // interno: no van en la OT que se entrega al cliente.
+  const printedRevisions = order.revisions.filter((revision) => !revision.es_interno);
+
   return (
     <main className="print-page work-order-print-page">
       <div className="print-actions no-print">
@@ -91,12 +95,12 @@ export default async function OrderPdfPage({ params }) {
         <section className="legacy-print-section">
           <h3>DIAGNOSTICOS:</h3>
           <div className="legacy-round-box tall">
-            {order.revisions.map((revision) => (
+            {printedRevisions.map((revision) => (
               <p key={revision.id}>
                 <strong>{formatDateTime(revision.created_at)}:</strong> {textOrDash(revision.observacion)}
               </p>
             ))}
-            {!order.revisions.length ? <p>Sin diagnostico.</p> : null}
+            {!printedRevisions.length ? <p>Sin diagnostico.</p> : null}
           </div>
         </section>
 
