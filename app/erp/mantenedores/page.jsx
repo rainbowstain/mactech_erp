@@ -20,14 +20,14 @@ function getResourceConfig(type, equipment = []) {
       addLabel: "Agregar Cliente",
       fields: [
         { key: "nombre", label: "Nombre", required: true },
-        { key: "run", label: "RUT" },
+        { key: "run", label: "RUT", type: "rut" },
         { key: "mail", label: "Email" },
         { key: "fono", label: "Telefono" },
         { key: "estado", label: "Estado", type: "status", defaultValue: 1 },
       ],
       columns: [
         { key: "nombre", label: "Nombre" },
-        { key: "run", label: "RUT" },
+        { key: "run", label: "RUT", type: "rut" },
         { key: "mail", label: "Email" },
         { key: "fono", label: "Telefono" },
         { key: "estado", label: "Estado", type: "status", align: "center" },

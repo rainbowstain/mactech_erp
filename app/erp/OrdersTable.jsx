@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { formatDate, formatMoney, orderStatusPillClass, textOrDash } from "@/lib/format";
 import { confirmAction, notifySuccess, notifyWarning } from "@/lib/notify";
+import { formatRut } from "@/lib/rut";
 import DataTable from "./DataTable";
 
 function orderReviewHref(orderId) {
@@ -165,7 +166,7 @@ export default function OrdersTable({ orders, orderStates = [], actionLabel = "V
           render: (order) => (
             <>
               <strong>{textOrDash(order.cliente_nombre)}</strong>
-              <span className="subtext">{textOrDash(order.cliente_run)}</span>
+              <span className="subtext">{textOrDash(formatRut(order.cliente_run))}</span>
             </>
           ),
         },

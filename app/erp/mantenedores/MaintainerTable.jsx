@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { Edit3, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { formatMoney, textOrDash } from "@/lib/format";
 import { notifyWarning, notifySuccess } from "@/lib/notify";
+import { formatRut } from "@/lib/rut";
 import DataTable from "../DataTable";
 
 function formatValue(value, type) {
   if (type === "money") return formatMoney(value);
   if (type === "status") return Number(value) === 1 ? "Habilitado" : "Deshabilitado";
+  if (type === "rut") return textOrDash(formatRut(value));
   return textOrDash(value);
 }
 
@@ -49,7 +51,8 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
   function openEdit(row) {
     const nextValues = emptyValues(fields);
     for (const field of fields) {
-      nextValues[field.key] = row[field.key] ?? field.defaultValue ?? "";
+      const raw = row[field.key] ?? field.defaultValue ?? "";
+      nextValues[field.key] = field.type === "rut" ? formatRut(raw) || raw : raw;
     }
     setEditing(row);
     setValues(nextValues);
@@ -155,12 +158,12 @@ export default function MaintainerTable({ title, rows, columns, fields, resource
       <input
         inputMode={field.type === "money" || field.type === "number" ? "numeric" : undefined}
         value={value}
-        onChange={(event) =>
-          updateValue(
-            field.key,
-            field.type === "money" || field.type === "number" ? event.target.value.replace(/\D/g, "") : event.target.value
-          )
-        }
+        onChange={(event) => {
+          const raw = event.target.value;
+          if (field.type === "money" || field.type === "number") updateValue(field.key, raw.replace(/\D/g, ""));
+          else if (field.type === "rut") updateValue(field.key, formatRut(raw));
+          else updateValue(field.key, raw);
+        }}
         required={field.required}
       />
     );

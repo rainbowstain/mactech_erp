@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, formatDateTime, formatMoney, textOrDash } from "@/lib/format";
 import { getOrder } from "@/lib/orders";
+import { formatRut } from "@/lib/rut";
 import { FaInstagram, FaTiktok, FaFacebookF, FaYoutube } from "react-icons/fa6";
 import PrintButton from "../PrintButton";
 import TermsQr from "../TermsQr";
@@ -76,7 +77,7 @@ export default async function OrderProtocolPage({ params }) {
               <PrintField label="Marca" value={order.equipo_nombre} />
             </div>
             <div>
-              <PrintField label="Rut" value={order.cliente_run} />
+              <PrintField label="Rut" value={formatRut(order.cliente_run)} />
               <PrintField label="Modelo" value={order.dispositivo_nombre} />
             </div>
             <div>

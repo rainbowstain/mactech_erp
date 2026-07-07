@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate, formatDateTime, formatMoney, orderStatusPillClass, textOrDash } from "@/lib/format";
 import { notifySuccess, notifyWarning } from "@/lib/notify";
+import { formatRut } from "@/lib/rut";
 
 const ORDER_STATES = [
   { id: 2, label: "En diagnostico" },
@@ -268,7 +269,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
           <h2>Orden nº {order.id}</h2>
         </div>
         <div className="legacy-form-grid legacy-form-grid-three">
-          <ReadonlyField label="Run" value={order.cliente_run} />
+          <ReadonlyField label="Run" value={formatRut(order.cliente_run)} />
           <ReadonlyField label="Nombre" value={order.cliente_nombre} />
           <ReadonlyField label="Fecha Ingreso" value={formatDateTime(order.created_at)} />
           <ReadonlyField label="Telefono" value={order.cliente_fono} />

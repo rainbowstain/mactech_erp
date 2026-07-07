@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth";
 import { query } from "@/lib/db";
-
-function normalizeRun(value) {
-  return String(value || "").replace(/[^0-9kK]/g, "").toLowerCase();
-}
+import { rutSearchKey } from "@/lib/rut";
 
 export async function GET(request) {
   const session = await readSession();
@@ -14,7 +11,7 @@ export async function GET(request) {
 
   const { searchParams } = new URL(request.url);
   const run = String(searchParams.get("run") || "").trim();
-  const normalizedRun = normalizeRun(run);
+  const normalizedRun = rutSearchKey(run);
 
   if (!normalizedRun) {
     return NextResponse.json({ message: "Debe ingresar un RUN valido." }, { status: 400 });

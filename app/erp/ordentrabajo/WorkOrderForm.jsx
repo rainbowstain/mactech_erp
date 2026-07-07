@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { notifySuccess, notifyWarning } from "@/lib/notify";
+import { formatRut } from "@/lib/rut";
 
 // "Diagnóstico" se ordena siempre primero en la lista de reparaciones. El precio
 // ya no se autocompleta (desde v1.5.7); este helper sólo afecta el orden.
@@ -149,7 +150,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
       if (data.client) {
         setClient({
           id: data.client.id,
-          run: data.client.run || run,
+          run: formatRut(data.client.run) || run,
           nombre: data.client.nombre || "",
           mail: data.client.mail || "",
           fono: data.client.fono || "",
@@ -365,7 +366,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
                   type="search"
                   placeholder="RUN ejemplo(12345678-9)"
                   value={client.run}
-                  onChange={(event) => updateClient("run", event.target.value)}
+                  onChange={(event) => updateClient("run", formatRut(event.target.value))}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();

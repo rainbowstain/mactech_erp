@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { formatRut } from "@/lib/rut";
 
 const RESOURCES = {
   clientes: {
@@ -74,6 +75,7 @@ function cleanPayload(config, body) {
     if (field === "estado") payload[field] = asInt(body[field], 1) ? 1 : 0;
     else if (field === "precio" || field === "costo") payload[field] = asInt(body[field], 0);
     else if (field === "modelo") payload[field] = asInt(body[field], null);
+    else if (field === "run") payload[field] = formatRut(body[field]) || null;
     else payload[field] = asNullableText(body[field]);
   }
 

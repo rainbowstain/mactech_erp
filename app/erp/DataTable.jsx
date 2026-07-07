@@ -9,7 +9,10 @@ function normalize(value) {
   return String(value ?? "")
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    // Puntos y guion fuera: asi un RUT se encuentra sin importar si se
+    // escribe o esta guardado con puntos/guion o sin ellos.
+    .replace(/[.-]/g, "");
 }
 
 function columnValue(column, row) {

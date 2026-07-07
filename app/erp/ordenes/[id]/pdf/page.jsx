@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, formatDateTime, formatMoney, textOrDash } from "@/lib/format";
 import { getOrder } from "@/lib/orders";
+import { formatRut } from "@/lib/rut";
 import { FaInstagram, FaTiktok, FaFacebookF, FaYoutube } from "react-icons/fa6";
 import PrintButton from "../PrintButton";
 
@@ -65,7 +66,7 @@ export default async function OrderPdfPage({ params }) {
                 <PrintField label="Marca" value={order.equipo_nombre} />
               </div>
               <div>
-                <PrintField label="Rut" value={order.cliente_run} />
+                <PrintField label="Rut" value={formatRut(order.cliente_run)} />
                 <PrintField label="E-mail" value={order.cliente_mail} />
                 <PrintField label="Dispositivo" value={order.dispositivo_nombre} />
               </div>

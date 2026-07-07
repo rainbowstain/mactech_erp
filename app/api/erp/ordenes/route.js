@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth";
 import { transaction } from "@/lib/db";
-
-function normalizeRun(value) {
-  return String(value || "").replace(/[^0-9kK]/g, "").toLowerCase();
-}
+import { formatRut, rutSearchKey } from "@/lib/rut";
 
 function asNullableText(value) {
   const text = String(value || "").trim();
@@ -50,7 +47,7 @@ function validate(body) {
   const order = body.order || {};
   const repairs = normalizeRepairs(order);
 
-  if (!normalizeRun(client.run)) return "Debe ingresar un RUN valido.";
+  if (!rutSearchKey(client.run)) return "Debe ingresar un RUN valido.";
   if (!asNullableText(client.nombre)) return "Debe ingresar el nombre del cliente.";
   if (!asNullableText(client.fono)) return "Debe ingresar el contacto del cliente.";
   if (!asNullableInt(order.id_equipo)) return "Debe seleccionar el equipo.";
@@ -77,7 +74,8 @@ export async function POST(request) {
   const orderPayload = body.order || {};
   const repairsPayload = normalizeRepairs(orderPayload);
   const answersPayload = Array.isArray(body.answers) ? body.answers : [];
-  const normalizedRun = normalizeRun(clientPayload.run);
+  const normalizedRun = rutSearchKey(clientPayload.run);
+  const formattedRun = formatRut(clientPayload.run);
 
   try {
     const result = await transaction(async (db) => {
@@ -164,7 +162,7 @@ export async function POST(request) {
             asNullableText(clientPayload.nombre),
             asNullableText(clientPayload.mail),
             asNullableText(clientPayload.fono),
-            asNullableText(clientPayload.run),
+            formattedRun,
             clientId,
           ]
         );
@@ -177,7 +175,7 @@ export async function POST(request) {
           `,
           [
             asNullableText(clientPayload.nombre),
-            asNullableText(clientPayload.run),
+            formattedRun,
             asNullableText(clientPayload.mail),
             asNullableText(clientPayload.fono),
           ]

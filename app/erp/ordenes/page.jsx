@@ -8,6 +8,7 @@ import { formatDateTime, textOrDash } from "@/lib/format";
 import { getInventoryItems } from "@/lib/inventory";
 import { getDevices, getDeviceStates, getEquipment, getParts, getQuestions } from "@/lib/maintainers";
 import { getOrder, getOrders, getOrderStates, getOrderStats, getReviewOrders } from "@/lib/orders";
+import { formatRut } from "@/lib/rut";
 import { getUsers, canDeleteOrders } from "@/lib/users";
 import { readSession } from "@/lib/auth";
 
@@ -116,7 +117,7 @@ function ReviewSearch({ id, run, nombre, hasSearch, orders }) {
                       </Link>
                     </td>
                     <td>{textOrDash(order.estado_nombre || order.estado)}</td>
-                    <td>{textOrDash(order.cliente_run)}</td>
+                    <td>{textOrDash(formatRut(order.cliente_run))}</td>
                     <td>{textOrDash(order.cliente_nombre)}</td>
                     <td>{textOrDash(order.equipo_nombre)}</td>
                     <td>{textOrDash(order.dispositivo_nombre)}</td>
