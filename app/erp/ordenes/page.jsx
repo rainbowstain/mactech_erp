@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightCircle, BarChart3, Gem, Paperclip, Plus, Send, Truck } from "lucide-react";
+import { ArrowRightCircle, BarChart3, Gem, Paperclip, Send, Truck } from "lucide-react";
 import Shell from "../Shell";
 import OrdersTable from "../OrdersTable";
 import WorkOrderForm from "../ordentrabajo/WorkOrderForm";
@@ -57,7 +57,7 @@ function StatCard({ href, active, value, label, action, icon: Icon }) {
           <dd>{label}</dd>
         </dl>
         <div className="legacy-dashboard-icon">
-          <Icon size={28} aria-hidden="true" />
+          <Icon size={20} aria-hidden="true" />
         </div>
       </div>
       <Link className={`legacy-dashboard-card-link ${active ? "active" : ""}`} href={href}>
@@ -142,7 +142,6 @@ export default async function OrdersPage({ searchParams }) {
   const params = await searchParams;
   const requestedTab = String(params?.tab || "ordenes");
   const tab = VALID_TABS.includes(requestedTab) ? requestedTab : "ordenes";
-  const search = String(params?.q || "");
 
   const pageSession = await readSession();
   const canDelete = canDeleteOrders(pageSession);
@@ -198,16 +197,14 @@ export default async function OrdersPage({ searchParams }) {
     const estadoParam = Number(params?.estado);
     const estadoFilter = [1, 2, 3, 6].includes(estadoParam) ? estadoParam : null;
     const [orders, stats, orderStates] = await Promise.all([
-      getOrders({ limit: 300, search }),
+      getOrders({ limit: 300 }),
       getOrderStats(),
       getOrderStates(),
     ]);
     const filteredOrders = estadoFilter
       ? orders.filter((order) => Number(order.estado) === estadoFilter)
       : orders;
-    const searchSuffix = search ? `&q=${encodeURIComponent(search)}` : "";
-    const cardHref = (estado) =>
-      `/erp/ordenes?tab=ordenes${estado ? `&estado=${estado}` : ""}${searchSuffix}`;
+    const cardHref = (estado) => `/erp/ordenes?tab=ordenes${estado ? `&estado=${estado}` : ""}`;
 
     content = (
       <>
@@ -255,20 +252,6 @@ export default async function OrdersPage({ searchParams }) {
         </section>
 
         <section className="panel section-gap">
-          <div className="panel-header panel-header-wrap">
-            <form className="search-form">
-              <input type="hidden" name="tab" value="ordenes" />
-              {estadoFilter ? <input type="hidden" name="estado" value={estadoFilter} /> : null}
-              <input name="q" defaultValue={search} placeholder="Buscar OT, cliente, RUT o equipo" />
-              <button className="ghost-button compact-button" type="submit">
-                Buscar
-              </button>
-            </form>
-            <Link className="primary-button inline-primary compact-button" href={tabHref("ingreso")}>
-              <Plus size={16} aria-hidden="true" />
-              Nueva orden
-            </Link>
-          </div>
           <OrdersTable orders={filteredOrders} orderStates={orderStates} canDelete={canDelete} />
         </section>
       </>

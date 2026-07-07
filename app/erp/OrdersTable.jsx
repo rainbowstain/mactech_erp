@@ -27,6 +27,19 @@ function uniqueOptions(orders, getValue) {
 // Entregado (5) pasan por sus flujos (boton garantia / cierre en revision).
 const QUICK_STATES = [1, 2, 3, 6];
 
+// Dias calendario que la OT lleva (o estuvo) en taller. Mientras esta abierta
+// corre contra hoy; al cerrarse queda fija contra la fecha de salida.
+// Ingreso y cierre el mismo dia = 0.
+function daysInShop(order) {
+  const start = new Date(order.created_at || order.fecha_entrega || NaN);
+  if (Number.isNaN(start.getTime())) return null;
+  const closed = Number(order.estado) === 5;
+  const end = closed ? new Date(order.fecha_salida || order.fecha_entrega || start) : new Date();
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+  return Math.max(0, Math.round((endDay - startDay) / 86400000));
+}
+
 function StatusCell({ order, orderStates, onChange, saving }) {
   const estado = Number(order.estado);
   const pillClass = orderStatusPillClass(estado);
@@ -131,11 +144,12 @@ export default function OrdersTable({ orders, orderStates = [], actionLabel = "V
     <DataTable
       rows={orders}
       emptyMessage="No hay ordenes para mostrar."
-      hideSearch
+      searchPlaceholder="Buscar OT, cliente, RUT o equipo"
       columns={[
         {
           key: "id",
           label: "OT",
+          filter: false,
           value: (order) => `#${order.id}`,
           render: (order) => (
             <Link className="table-link" href={orderReviewHref(order.id)}>
@@ -146,6 +160,7 @@ export default function OrdersTable({ orders, orderStates = [], actionLabel = "V
         {
           key: "cliente",
           label: "Cliente",
+          filter: false,
           value: (order) => `${order.cliente_nombre || ""} ${order.cliente_run || ""}`,
           render: (order) => (
             <>
@@ -185,23 +200,33 @@ export default function OrdersTable({ orders, orderStates = [], actionLabel = "V
         },
         {
           key: "fecha",
-          label: "Fecha",
+          label: "Ingreso",
           value: (order) => formatDate(order.created_at || order.fecha_entrega),
-          filterType: "date",
+          filterType: "day",
           dateValue: (order) => order.created_at || order.fecha_entrega,
           sortable: true,
           sortValue: (order) => new Date(order.created_at || order.fecha_entrega || 0).getTime(),
-          sortLabels: { asc: "Fecha (más antigua)", desc: "Fecha (más reciente)" },
+          sortLabels: { asc: "Ingreso (más antiguo)", desc: "Ingreso (más reciente)" },
         },
         {
           key: "entrega",
-          label: "Fecha de entrega",
+          label: "Entrega",
           value: (order) => formatDate(order.fecha_salida),
-          filterType: "date",
+          filterType: "day",
           dateValue: (order) => order.fecha_salida,
           sortable: true,
           sortValue: (order) => new Date(order.fecha_salida || 0).getTime(),
           sortLabels: { asc: "Entrega (más antigua)", desc: "Entrega (más reciente)" },
+        },
+        {
+          key: "dias",
+          label: "Días",
+          align: "center",
+          filter: false,
+          value: (order) => daysInShop(order),
+          sortable: true,
+          sortValue: (order) => daysInShop(order) ?? -1,
+          sortLabels: { asc: "Menos días en taller", desc: "Más días en taller" },
         },
         {
           key: "total",

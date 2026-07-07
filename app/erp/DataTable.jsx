@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
 import { textOrDash } from "@/lib/format";
 import Combobox from "./Combobox";
 
@@ -23,6 +23,14 @@ function dateValue(column, row) {
   return Number.isNaN(time) ? null : time;
 }
 
+// "yyyy-mm-dd" del input date interpretado como medianoche LOCAL (no UTC),
+// para que el dia filtrado coincida con el dia que ve el usuario.
+function localDayStart(value) {
+  const [year, month, day] = String(value).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day).getTime();
+}
+
 function sortValue(column, row) {
   return column.sortValue ? column.sortValue(row) : columnValue(column, row);
 }
@@ -42,6 +50,50 @@ function alignClass(align) {
   return undefined;
 }
 
+// Boton que se expande hacia abajo con checkboxes: permite marcar varias
+// opciones sin ocupar toda una fila del panel de filtros.
+function MultiSelect({ options, selected, onToggle, allLabel = "Todos" }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutside(event) {
+      if (wrapRef.current && !wrapRef.current.contains(event.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const summary = !selected.length
+    ? allLabel
+    : selected.length === 1
+      ? options.find((option) => option.value === selected[0])?.label || selected[0]
+      : `${options.find((option) => option.value === selected[0])?.label || selected[0]} +${selected.length - 1}`;
+
+  return (
+    <div className={`multiselect${open ? " is-open" : ""}`} ref={wrapRef}>
+      <button type="button" className="multiselect-control" onClick={() => setOpen((current) => !current)} aria-expanded={open}>
+        <span className={selected.length ? "" : "multiselect-placeholder"}>{summary}</span>
+        <ChevronDown size={15} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="combobox-menu multiselect-menu">
+          {options.map((option) => (
+            <label className="multiselect-option" key={option.value}>
+              <input
+                type="checkbox"
+                checked={selected.includes(option.value)}
+                onChange={(event) => onToggle(option.value, event.target.checked)}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function DataTable({
   rows,
   columns,
@@ -49,6 +101,7 @@ export default function DataTable({
   initialPageSize = 25,
   rowKey = "id",
   toolbar,
+  searchPlaceholder = "Buscar en la tabla",
   // Oculta el buscador propio de la tabla cuando la pagina ya trae uno (evita duplicados).
   hideSearch = false,
   // Modo servidor (opcional): filtros/búsqueda/paginación controlados por el padre.
@@ -96,8 +149,16 @@ export default function DataTable({
         if (!column) continue;
         if (column.filterType === "date") {
           const time = dateValue(column, row);
-          if (value.from && (time == null || time < new Date(value.from).getTime())) return false;
-          if (value.to && (time == null || time > new Date(value.to).getTime() + 86399999)) return false;
+          if (value.from && (time == null || time < localDayStart(value.from))) return false;
+          if (value.to && (time == null || time > localDayStart(value.to) + 86399999)) return false;
+          continue;
+        }
+        // Filtro de dia unico: muestra solo las filas cuya fecha cae ese dia.
+        if (column.filterType === "day") {
+          const dayStart = localDayStart(value);
+          if (dayStart == null) continue;
+          const time = dateValue(column, row);
+          if (time == null || time < dayStart || time > dayStart + 86399999) return false;
           continue;
         }
         // Filtro multiple (checkboxes): basta con calzar una de las opciones marcadas.
@@ -159,7 +220,7 @@ export default function DataTable({
   function clearFilterValue(column) {
     if (column.filterType === "date") return {};
     if (column.filterMultiple) return [];
-    return "";
+    return ""; // cubre texto, selects y filtros de dia unico
   }
 
   function clearAllFilters() {
@@ -200,7 +261,7 @@ export default function DataTable({
                 setQuery(event.target.value);
                 setClientPage(1);
               }}
-              placeholder="Buscar en la tabla"
+              placeholder={searchPlaceholder}
             />
           </label>
         )}
@@ -260,28 +321,18 @@ export default function DataTable({
           ) : null}
 
           {filterableColumns.map((column) => {
-            // Grupo de checkboxes: permite marcar varias opciones a la vez.
+            // Seleccion multiple: boton que se expande hacia abajo con checkboxes.
             // Usa <div> porque un <label> no puede contener otros <label>.
             if (column.filterMultiple && column.filterOptions) {
               const selected = Array.isArray(filters[column.key]) ? filters[column.key] : [];
               return (
-                <div className="data-table-filter-group data-table-filter-multi" key={column.key}>
+                <div className="data-table-filter-group" key={column.key}>
                   <span>{column.filterLabel || column.label}</span>
-                  <div className="data-table-filter-checks">
-                    {column.filterOptions.map((option) => {
-                      const checked = selected.includes(option.value);
-                      return (
-                        <label className={`filter-check${checked ? " is-checked" : ""}`} key={option.value}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(event) => toggleMultiFilter(column.key, option.value, event.target.checked)}
-                          />
-                          {option.label}
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <MultiSelect
+                    options={column.filterOptions}
+                    selected={selected}
+                    onToggle={(option, checked) => toggleMultiFilter(column.key, option, checked)}
+                  />
                 </div>
               );
             }
@@ -303,6 +354,13 @@ export default function DataTable({
                     aria-label={`${column.filterLabel || column.label} hasta`}
                   />
                 </div>
+              ) : column.filterType === "day" ? (
+                <input
+                  type="date"
+                  value={filters[column.key] || ""}
+                  onChange={(event) => updateFilter(column.key, event.target.value)}
+                  aria-label={column.filterLabel || column.label}
+                />
               ) : column.filterOptions && column.filterSearchable ? (
                 <Combobox
                   value={filters[column.key] || ""}
