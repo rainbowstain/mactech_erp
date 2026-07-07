@@ -290,6 +290,33 @@ button:disabled {
   overflow: hidden;
 }
 
+.sidebar-web-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  margin: 0 2px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.sidebar-web-link:hover {
+  background: var(--brand);
+  color: #fff;
+}
+
+.sidebar-collapsed .sidebar-web-link span {
+  display: none;
+}
+
 .sidebar-version {
   margin-top: auto;
   padding: 12px 10px 2px;
@@ -647,13 +674,6 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.topbar-web-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
 }
 
 .content {
@@ -3982,10 +4002,6 @@ tr:hover td {
   .topbar {
     padding-left: 16px;
     padding-right: 16px;
-  }
-
-  .topbar-web-link span {
-    display: none;
   }
 
   .legacy-print-sheet {

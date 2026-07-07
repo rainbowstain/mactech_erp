@@ -1,27 +1,6 @@
-import Shell from "../Shell";
-import { requireSession } from "@/lib/auth";
-import { canManageUsers, getUsers, USER_ROLES } from "@/lib/users";
-import UsersModule from "./UsersModule";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function UsersPage() {
-  const session = await requireSession();
-  const allowed = canManageUsers(session);
-  const users = allowed ? await getUsers() : [];
-
-  return (
-    <Shell active="usuarios" title="Usuarios">
-      {allowed ? (
-        <UsersModule initialUsers={users} roles={USER_ROLES} currentUserId={session.id} />
-      ) : (
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Sin permiso</h2>
-          </div>
-          <p className="empty-state">Tu rol actual no permite administrar usuarios.</p>
-        </section>
-      )}
-    </Shell>
-  );
+// Usuarios se fusiono con Mantenedores bajo Configuración (pestaña "Usuarios").
+export default function UsersPageRedirect() {
+  redirect("/erp/mantenedores?tipo=usuarios");
 }

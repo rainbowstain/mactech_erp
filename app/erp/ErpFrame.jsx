@@ -16,10 +16,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ReceiptText,
-  Settings2,
+  Settings,
   SlidersHorizontal,
-  UserCog,
-  Wrench,
 } from "lucide-react";
 import LogoutButton from "./LogoutButton";
 import ThemeToggle from "./ThemeToggle";
@@ -41,16 +39,12 @@ const financeItems = [
   { href: "/erp/finanzas/reporte", label: "Reporte Mensual", icon: FileBarChart, active: "finanzas-reporte" },
 ];
 
-const systemItems = [{ href: "/erp/usuarios", label: "Usuarios", icon: UserCog, active: "usuarios" }];
-
-const maintainerItems = [{ href: "/erp/mantenedores", label: "Mantenedores", icon: Wrench, active: "mantenedores" }];
-
+// Sistema y Mantenedores se fusionaron en Configuración: ya no van en el
+// sidebar, se acceden con el boton de tuerca de la barra superior.
 const groups = [
   { key: "ventas", label: "Ventas", icon: CreditCard, items: salesItems },
   { key: "inventario", label: "Inventario", icon: Boxes, items: inventoryItems },
   { key: "finanzas", label: "Finanzas", icon: DollarSign, items: financeItems },
-  { key: "sistema", label: "Sistema", icon: UserCog, items: systemItems },
-  { key: "mantenedores", label: "Mantenedores", icon: Settings2, items: maintainerItems },
 ];
 
 function activeGroupKey(active) {
@@ -165,6 +159,10 @@ export default function ErpFrame({ active, title, session, children }) {
             />
           ))}
         </nav>
+        <a className="sidebar-web-link" href={publicWebUrl} target="_blank" rel="noreferrer" title="Ir a web">
+          <Globe size={16} aria-hidden="true" />
+          <span>Ir a web</span>
+        </a>
         <div className="sidebar-version" title="Versión del sistema">{APP_VERSION_LABEL}</div>
       </aside>
       <main className="main">
@@ -180,10 +178,9 @@ export default function ErpFrame({ active, title, session, children }) {
               <span>{session.name || session.email}</span>
               <small>{session.role}</small>
             </div>
-            <a className="ghost-button compact-button topbar-web-link" href={publicWebUrl} target="_blank" rel="noreferrer">
-              <Globe size={16} aria-hidden="true" />
-              <span>Ir a web</span>
-            </a>
+            <Link className="icon-button" href="/erp/mantenedores" title="Configuración">
+              <Settings size={18} aria-hidden="true" />
+            </Link>
             <ThemeToggle />
             <LogoutButton />
           </div>
