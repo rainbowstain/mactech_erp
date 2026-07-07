@@ -64,9 +64,14 @@ export default function OrdersTable({ orders, orderStates = [], actionLabel = "V
   const [deletingId, setDeletingId] = useState(null);
   const [statusSavingId, setStatusSavingId] = useState(null);
 
+  // Con el catalogo completo de estados se puede filtrar por estados que hoy
+  // no tienen ordenes a la vista (p. ej. marcar solo Ingresado + Entregado).
   const estadoOptions = useMemo(
-    () => uniqueOptions(orders, (order) => order.estado_nombre || order.estado),
-    [orders]
+    () =>
+      orderStates.length
+        ? orderStates.map((state) => ({ value: state.nombre_estado, label: state.nombre_estado }))
+        : uniqueOptions(orders, (order) => order.estado_nombre || order.estado),
+    [orderStates, orders]
   );
   const modeloOptions = useMemo(() => uniqueOptions(orders, (order) => order.dispositivo_nombre), [orders]);
 
@@ -168,6 +173,7 @@ export default function OrdersTable({ orders, orderStates = [], actionLabel = "V
           label: "Estado",
           value: (order) => order.estado_nombre || order.estado,
           filterOptions: estadoOptions,
+          filterMultiple: true,
           render: (order) => (
             <StatusCell
               order={order}

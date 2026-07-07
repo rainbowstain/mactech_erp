@@ -1021,6 +1021,52 @@ button:disabled {
   grid-column: span 2;
 }
 
+.data-table-filter-group {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.data-table-filter-multi {
+  grid-column: 1 / -1;
+}
+
+.data-table-filter-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.data-table-filter-checks .filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+
+.data-table-filter-checks .filter-check input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.data-table-filter-checks .filter-check.is-checked {
+  border-color: rgba(124, 77, 255, 0.36);
+  background: linear-gradient(180deg, rgba(124, 77, 255, 0.14), rgba(124, 77, 255, 0.08));
+  color: var(--brand);
+}
+
 .data-table-date-range {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

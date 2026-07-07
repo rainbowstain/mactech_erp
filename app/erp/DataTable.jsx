@@ -100,6 +100,13 @@ export default function DataTable({
           if (value.to && (time == null || time > new Date(value.to).getTime() + 86399999)) return false;
           continue;
         }
+        // Filtro multiple (checkboxes): basta con calzar una de las opciones marcadas.
+        if (Array.isArray(value)) {
+          if (!value.length) continue;
+          const cell = normalize(columnValue(column, row));
+          if (!value.some((option) => cell.includes(normalize(option)))) return false;
+          continue;
+        }
         if (!normalize(columnValue(column, row)).includes(normalize(value))) return false;
       }
 
@@ -123,8 +130,11 @@ export default function DataTable({
   const visibleRows = server ? rows : filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const activeFilterCount =
-    Object.values(filters).filter((value) => (value && typeof value === "object" ? value.from || value.to : value))
-      .length + (clientSort.key ? 1 : 0);
+    Object.values(filters).filter((value) => {
+      if (Array.isArray(value)) return value.length > 0;
+      if (value && typeof value === "object") return value.from || value.to;
+      return value;
+    }).length + (clientSort.key ? 1 : 0);
 
   function updateFilter(key, value) {
     if (server) {
@@ -140,8 +150,20 @@ export default function DataTable({
     updateFilter(key, { ...current, [part]: value });
   }
 
+  function toggleMultiFilter(key, option, checked) {
+    const current = Array.isArray(filters[key]) ? filters[key] : [];
+    const next = checked ? [...current, option] : current.filter((item) => item !== option);
+    updateFilter(key, next);
+  }
+
+  function clearFilterValue(column) {
+    if (column.filterType === "date") return {};
+    if (column.filterMultiple) return [];
+    return "";
+  }
+
   function clearAllFilters() {
-    filterableColumns.forEach((column) => updateFilter(column.key, column.filterType === "date" ? {} : ""));
+    filterableColumns.forEach((column) => updateFilter(column.key, clearFilterValue(column)));
     setClientSort({ key: null, direction: "asc" });
     setQuery("");
     setClientPage(1);
@@ -237,7 +259,33 @@ export default function DataTable({
             </label>
           ) : null}
 
-          {filterableColumns.map((column) => (
+          {filterableColumns.map((column) => {
+            // Grupo de checkboxes: permite marcar varias opciones a la vez.
+            // Usa <div> porque un <label> no puede contener otros <label>.
+            if (column.filterMultiple && column.filterOptions) {
+              const selected = Array.isArray(filters[column.key]) ? filters[column.key] : [];
+              return (
+                <div className="data-table-filter-group data-table-filter-multi" key={column.key}>
+                  <span>{column.filterLabel || column.label}</span>
+                  <div className="data-table-filter-checks">
+                    {column.filterOptions.map((option) => {
+                      const checked = selected.includes(option.value);
+                      return (
+                        <label className={`filter-check${checked ? " is-checked" : ""}`} key={option.value}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => toggleMultiFilter(column.key, option.value, event.target.checked)}
+                          />
+                          {option.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            }
+            return (
             <label key={column.key} className={column.filterType === "date" ? "data-table-filter-date" : undefined}>
               <span>{column.filterLabel || column.label}</span>
               {column.filterType === "date" ? (
@@ -278,7 +326,8 @@ export default function DataTable({
                 />
               )}
             </label>
-          ))}
+            );
+          })}
 
           {activeFilterCount ? (
             <button type="button" className="data-table-filter-clear" onClick={clearAllFilters}>
