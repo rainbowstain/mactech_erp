@@ -25,7 +25,7 @@ function uniqueOptions(orders, getValue) {
 
 // Estados operativos que se cambian directo en la tabla. Garantia (4) y
 // Entregado (5) pasan por sus flujos (boton garantia / cierre en revision).
-const QUICK_STATES = [1, 2, 3];
+const QUICK_STATES = [1, 2, 3, 6];
 
 function StatusCell({ order, orderStates, onChange, saving }) {
   const estado = Number(order.estado);

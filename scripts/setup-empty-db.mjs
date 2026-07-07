@@ -17,6 +17,7 @@ const ORDER_STATES = [
   [3, "PARA RETIRO"],
   [4, "GARANTIA"],
   [5, "ENTREGADO"],
+  [6, "ESPERA REPUESTO"],
 ];
 
 const DEVICE_STATES = [

@@ -8,6 +8,7 @@ import { notifySuccess, notifyWarning } from "@/lib/notify";
 
 const ORDER_STATES = [
   { id: 2, label: "En diagnostico" },
+  { id: 6, label: "Espera repuesto" },
   { id: 3, label: "Listo para Retirar" },
   { id: 4, label: "Garantia" },
 ];

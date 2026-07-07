@@ -5,7 +5,7 @@ import { query } from "@/lib/db";
 // Estados que se pueden cambiar directo desde la tabla de ordenes.
 // Garantia (4) se gestiona con su boton propio y Entregado (5) exige el
 // cierre en revision (repuestos, metodo de pago, venta en finanzas).
-const QUICK_STATES = [1, 2, 3];
+const QUICK_STATES = [1, 2, 3, 6];
 
 function asPositiveInt(value) {
   const number = Number(value);

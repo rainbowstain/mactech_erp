@@ -663,7 +663,7 @@ button:disabled {
 
 .legacy-dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   margin-bottom: 22px;
 }
@@ -1381,6 +1381,11 @@ tr:hover td {
 .pill.red {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.pill.orange {
+  background: #ffedd5;
+  color: #9a3412;
 }
 
 /* Pill editable: mismo look que .pill pero es un <select> para cambiar

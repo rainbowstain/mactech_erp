@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightCircle, BarChart3, Gem, Paperclip, Plus, Send } from "lucide-react";
+import { ArrowRightCircle, BarChart3, Gem, Paperclip, Plus, Send, Truck } from "lucide-react";
 import Shell from "../Shell";
 import OrdersTable from "../OrdersTable";
 import WorkOrderForm from "../ordentrabajo/WorkOrderForm";
@@ -191,7 +191,7 @@ export default async function OrdersPage({ searchParams }) {
 
   if (tab === "ordenes") {
     const estadoParam = Number(params?.estado);
-    const estadoFilter = [1, 2, 3].includes(estadoParam) ? estadoParam : null;
+    const estadoFilter = [1, 2, 3, 6].includes(estadoParam) ? estadoParam : null;
     const [orders, stats, orderStates] = await Promise.all([
       getOrders({ limit: 300, search }),
       getOrderStats(),
@@ -222,6 +222,14 @@ export default async function OrdersPage({ searchParams }) {
             label="Ordenes en revision"
             action="Ver en revision"
             icon={Paperclip}
+          />
+          <StatCard
+            href={cardHref(6)}
+            active={estadoFilter === 6}
+            value={stats.espera_repuesto}
+            label="Esperando repuesto"
+            action="Ver esperando repuesto"
+            icon={Truck}
           />
           <StatCard
             href={cardHref(3)}
