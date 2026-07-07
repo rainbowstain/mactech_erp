@@ -11,7 +11,6 @@ import {
   DollarSign,
   FileBarChart,
   Globe,
-  LayoutDashboard,
   Menu,
   PackageSearch,
   PanelLeftClose,
@@ -27,10 +26,6 @@ import ThemeToggle from "./ThemeToggle";
 import { APP_VERSION_LABEL } from "@/lib/version";
 
 const publicWebUrl = process.env.NEXT_PUBLIC_WEB_URL || "/";
-
-const orderItems = [
-  { href: "/erp/ordenes", label: "Ordenes de trabajo", icon: ClipboardList, active: "ordenes" },
-];
 
 const inventoryItems = [
   { href: "/erp/inventario/productos", label: "Productos", icon: Boxes, active: "inventario-productos" },
@@ -51,7 +46,6 @@ const systemItems = [{ href: "/erp/usuarios", label: "Usuarios", icon: UserCog, 
 const maintainerItems = [{ href: "/erp/mantenedores", label: "Mantenedores", icon: Wrench, active: "mantenedores" }];
 
 const groups = [
-  { key: "ordenes", label: "Orden De Trabajo", icon: ClipboardList, items: orderItems },
   { key: "ventas", label: "Ventas", icon: CreditCard, items: salesItems },
   { key: "inventario", label: "Inventario", icon: Boxes, items: inventoryItems },
   { key: "finanzas", label: "Finanzas", icon: DollarSign, items: financeItems },
@@ -151,7 +145,12 @@ export default function ErpFrame({ active, title, session, children }) {
         </div>
         <nav className="nav-list" aria-label="Principal">
           <div className="nav-main-item">
-            <NavItem item={{ href: "/erp", label: "Inicio", icon: LayoutDashboard, active: "dashboard" }} active={active} collapsed={collapsed} onClose={closeMobileSidebar} />
+            <NavItem
+              item={{ href: "/erp/ordenes", label: "Ordenes de trabajo", icon: ClipboardList, active: "ordenes" }}
+              active={active}
+              collapsed={collapsed}
+              onClose={closeMobileSidebar}
+            />
           </div>
           {groups.map((group) => (
             <NavGroup

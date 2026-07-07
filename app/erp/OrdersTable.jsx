@@ -23,9 +23,46 @@ function uniqueOptions(orders, getValue) {
     .map((value) => ({ value, label: value }));
 }
 
-export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = false }) {
+// Estados operativos que se cambian directo en la tabla. Garantia (4) y
+// Entregado (5) pasan por sus flujos (boton garantia / cierre en revision).
+const QUICK_STATES = [1, 2, 3];
+
+function StatusCell({ order, orderStates, onChange, saving }) {
+  const estado = Number(order.estado);
+  const pillClass = orderStatusPillClass(estado);
+
+  if (!QUICK_STATES.includes(estado) || !orderStates.length) {
+    return (
+      <span className={`pill ${pillClass}`} title="Este estado se gestiona desde la orden (Ver)">
+        {textOrDash(order.estado_nombre || order.estado)}
+      </span>
+    );
+  }
+
+  return (
+    <select
+      className={`pill status-select ${pillClass}`}
+      value={estado}
+      disabled={saving}
+      title="Cambiar estado"
+      aria-label={`Cambiar estado de la OT ${order.id}`}
+      onChange={(event) => onChange(order, Number(event.target.value))}
+    >
+      {orderStates
+        .filter((state) => QUICK_STATES.includes(Number(state.id)))
+        .map((state) => (
+          <option key={state.id} value={state.id}>
+            {state.nombre_estado}
+          </option>
+        ))}
+    </select>
+  );
+}
+
+export default function OrdersTable({ orders, orderStates = [], actionLabel = "Ver", canDelete = false }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState(null);
+  const [statusSavingId, setStatusSavingId] = useState(null);
 
   const estadoOptions = useMemo(
     () => uniqueOptions(orders, (order) => order.estado_nombre || order.estado),
@@ -56,6 +93,28 @@ export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = f
       notifyWarning("No se pudo conectar para eliminar la orden.");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleStatusChange(order, estado) {
+    setStatusSavingId(order.id);
+    try {
+      const response = await fetch(`/api/erp/ordenes/${order.id}/estado`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estado }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        notifyWarning(data.message || "No se pudo cambiar el estado.");
+        return;
+      }
+      notifySuccess(`OT #${order.id} actualizada.`);
+      router.refresh();
+    } catch {
+      notifyWarning("No se pudo conectar para cambiar el estado.");
+    } finally {
+      setStatusSavingId(null);
     }
   }
 
@@ -110,9 +169,12 @@ export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = f
           value: (order) => order.estado_nombre || order.estado,
           filterOptions: estadoOptions,
           render: (order) => (
-            <span className={`pill ${orderStatusPillClass(order.estado)}`}>
-              {textOrDash(order.estado_nombre || order.estado)}
-            </span>
+            <StatusCell
+              order={order}
+              orderStates={orderStates}
+              onChange={handleStatusChange}
+              saving={statusSavingId === order.id}
+            />
           ),
         },
         {

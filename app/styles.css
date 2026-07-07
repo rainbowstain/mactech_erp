@@ -915,6 +915,13 @@ button:disabled {
   color: var(--brand);
 }
 
+/* Barra de pestañas de Ordenes: solo los tabs alineados a la derecha,
+   sin panel ni titulo (el titulo vive en la barra superior). */
+.order-tabs-bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .maintainer-message {
   flex-basis: 100%;
   margin: 0;
@@ -1328,6 +1335,29 @@ tr:hover td {
 .pill.red {
   background: #fee2e2;
   color: #991b1b;
+}
+
+/* Pill editable: mismo look que .pill pero es un <select> para cambiar
+   el estado de la OT directo en la tabla. */
+.status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  outline: 0;
+  cursor: pointer;
+  padding-right: 24px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.status-select:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.status-select:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .role-pill {

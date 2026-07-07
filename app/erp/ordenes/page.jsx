@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRightCircle, BarChart3, Gem, Paperclip, Plus, Send } from "lucide-react";
 import Shell from "../Shell";
 import OrdersTable from "../OrdersTable";
 import WorkOrderForm from "../ordentrabajo/WorkOrderForm";
@@ -6,7 +7,7 @@ import RevisionWorkflow from "../revision/RevisionWorkflow";
 import { formatDateTime, textOrDash } from "@/lib/format";
 import { getInventoryItems } from "@/lib/inventory";
 import { getDevices, getDeviceStates, getEquipment, getParts, getQuestions } from "@/lib/maintainers";
-import { getOrder, getOrders, getReviewOrders } from "@/lib/orders";
+import { getOrder, getOrders, getOrderStates, getOrderStats, getReviewOrders } from "@/lib/orders";
 import { getUsers, canDeleteOrders } from "@/lib/users";
 import { readSession } from "@/lib/auth";
 
@@ -26,20 +27,39 @@ function tabHref(tab) {
   return `/erp/ordenes?tab=${tab}`;
 }
 
+// Barra de pestañas sin titulo propio: el titulo ya esta en la barra superior
+// y repetirlo aqui duplicaba "Ordenes de trabajo" en la misma pantalla.
 function OrderTabs({ active }) {
   return (
-    <section className="maintainer-tabs panel order-tabs-panel">
-      <div className="panel-header panel-header-wrap">
-        <h2>Ordenes de trabajo</h2>
-        <div className="maintainer-tab-list" role="tablist" aria-label="Ordenes">
-          {ORDER_TABS.map((tab) => (
-            <Link className={`maintainer-tab ${active === tab.key ? "active" : ""}`} href={tabHref(tab.key)} key={tab.key}>
-              {tab.label}
-            </Link>
-          ))}
+    <div className="order-tabs-bar">
+      <div className="maintainer-tab-list" role="tablist" aria-label="Ordenes">
+        {ORDER_TABS.map((tab) => (
+          <Link className={`maintainer-tab ${active === tab.key ? "active" : ""}`} href={tabHref(tab.key)} key={tab.key}>
+            {tab.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ href, active, value, label, action, icon: Icon }) {
+  return (
+    <article className="legacy-dashboard-card">
+      <div className="legacy-dashboard-card-main">
+        <dl>
+          <dt>{value}</dt>
+          <dd>{label}</dd>
+        </dl>
+        <div className="legacy-dashboard-icon">
+          <Icon size={28} aria-hidden="true" />
         </div>
       </div>
-    </section>
+      <Link className={`legacy-dashboard-card-link ${active ? "active" : ""}`} href={href}>
+        <span>{action}</span>
+        <ArrowRightCircle size={16} aria-hidden="true" />
+      </Link>
+    </article>
   );
 }
 
@@ -170,21 +190,75 @@ export default async function OrdersPage({ searchParams }) {
   }
 
   if (tab === "ordenes") {
-    const orders = await getOrders({ limit: 300, search });
+    const estadoParam = Number(params?.estado);
+    const estadoFilter = [1, 2, 3].includes(estadoParam) ? estadoParam : null;
+    const [orders, stats, orderStates] = await Promise.all([
+      getOrders({ limit: 300, search }),
+      getOrderStats(),
+      getOrderStates(),
+    ]);
+    const filteredOrders = estadoFilter
+      ? orders.filter((order) => Number(order.estado) === estadoFilter)
+      : orders;
+    const searchSuffix = search ? `&q=${encodeURIComponent(search)}` : "";
+    const cardHref = (estado) =>
+      `/erp/ordenes?tab=ordenes${estado ? `&estado=${estado}` : ""}${searchSuffix}`;
+
     content = (
-      <section className="panel section-gap">
-        <div className="panel-header panel-header-wrap">
-          <h2>Todas las ordenes</h2>
-          <form className="search-form">
-            <input type="hidden" name="tab" value="ordenes" />
-            <input name="q" defaultValue={search} placeholder="Buscar OT, cliente, RUT o equipo" />
-            <button className="ghost-button compact-button" type="submit">
-              Buscar
-            </button>
-          </form>
-        </div>
-        <OrdersTable orders={orders} canDelete={canDelete} />
-      </section>
+      <>
+        <section className="legacy-dashboard-grid section-gap">
+          <StatCard
+            href={cardHref(1)}
+            active={estadoFilter === 1}
+            value={stats.sin_revisar}
+            label="Ordenes sin revisar"
+            action="Ver sin revisar"
+            icon={Gem}
+          />
+          <StatCard
+            href={cardHref(2)}
+            active={estadoFilter === 2}
+            value={stats.en_revision}
+            label="Ordenes en revision"
+            action="Ver en revision"
+            icon={Paperclip}
+          />
+          <StatCard
+            href={cardHref(3)}
+            active={estadoFilter === 3}
+            value={stats.para_retiro}
+            label="Ordenes para retiro"
+            action="Ver para retiro"
+            icon={Send}
+          />
+          <StatCard
+            href={cardHref(null)}
+            active={!estadoFilter}
+            value={stats.total}
+            label="Total de ordenes"
+            action="Ver todas"
+            icon={BarChart3}
+          />
+        </section>
+
+        <section className="panel section-gap">
+          <div className="panel-header panel-header-wrap">
+            <form className="search-form">
+              <input type="hidden" name="tab" value="ordenes" />
+              {estadoFilter ? <input type="hidden" name="estado" value={estadoFilter} /> : null}
+              <input name="q" defaultValue={search} placeholder="Buscar OT, cliente, RUT o equipo" />
+              <button className="ghost-button compact-button" type="submit">
+                Buscar
+              </button>
+            </form>
+            <Link className="primary-button inline-primary compact-button" href={tabHref("ingreso")}>
+              <Plus size={16} aria-hidden="true" />
+              Nueva orden
+            </Link>
+          </div>
+          <OrdersTable orders={filteredOrders} orderStates={orderStates} canDelete={canDelete} />
+        </section>
+      </>
     );
   }
 
