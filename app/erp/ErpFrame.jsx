@@ -57,10 +57,10 @@ function activeGroupKey(active) {
   return groups.find((group) => group.items.some((item) => item.active === active))?.key || "";
 }
 
-function NavItem({ item, active, collapsed, onClose }) {
+function NavItem({ item, active, collapsed, onClose, className = "" }) {
   const Icon = item.icon;
   return (
-    <Link className={`nav-main-link ${active === item.active ? "active" : ""}`} href={item.href} title={collapsed ? item.label : undefined} onClick={onClose}>
+    <Link className={`nav-main-link ${className} ${active === item.active ? "active" : ""}`} href={item.href} title={collapsed ? item.label : undefined} onClick={onClose}>
       <Icon size={18} aria-hidden="true" />
       <span>{item.label}</span>
     </Link>
@@ -150,6 +150,7 @@ export default function ErpFrame({ active, title, session, children }) {
               active={active}
               collapsed={collapsed}
               onClose={closeMobileSidebar}
+              className="nav-main-link-primary"
             />
           </div>
           {groups.map((group) => (

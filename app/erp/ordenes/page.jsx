@@ -29,16 +29,21 @@ function tabHref(tab) {
 
 // Barra de pestañas sin titulo propio: el titulo ya esta en la barra superior
 // y repetirlo aqui duplicaba "Ordenes de trabajo" en la misma pantalla.
+// Estilo "tabs de navegador": ocupan todo el ancho, la no seleccionada se ve opacada.
 function OrderTabs({ active }) {
   return (
-    <div className="order-tabs-bar">
-      <div className="maintainer-tab-list" role="tablist" aria-label="Ordenes">
-        {ORDER_TABS.map((tab) => (
-          <Link className={`maintainer-tab ${active === tab.key ? "active" : ""}`} href={tabHref(tab.key)} key={tab.key}>
-            {tab.label}
-          </Link>
-        ))}
-      </div>
+    <div className="order-tabs-bar" role="tablist" aria-label="Ordenes">
+      {ORDER_TABS.map((tab) => (
+        <Link
+          className={`order-tab ${active === tab.key ? "active" : ""}`}
+          href={tabHref(tab.key)}
+          key={tab.key}
+          role="tab"
+          aria-selected={active === tab.key}
+        >
+          {tab.label}
+        </Link>
+      ))}
     </div>
   );
 }
