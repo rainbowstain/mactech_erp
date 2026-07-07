@@ -6,18 +6,21 @@ import RevisionWorkflow from "../revision/RevisionWorkflow";
 import { formatDateTime, textOrDash } from "@/lib/format";
 import { getInventoryItems } from "@/lib/inventory";
 import { getDevices, getDeviceStates, getEquipment, getParts, getQuestions } from "@/lib/maintainers";
-import { getClosedOrders, getOrder, getOrders, getReviewOrders } from "@/lib/orders";
+import { getOrder, getOrders, getReviewOrders } from "@/lib/orders";
 import { getUsers, canDeleteOrders } from "@/lib/users";
 import { readSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+// Pestañas visibles. "revision" sigue existiendo como ruta (destino del
+// boton "Ver" de la tabla de Ordenes) pero ya no se muestra como pestaña:
+// Ordenes ya trae buscador y filtro por estado, asi que duplicaba a Revisar/Cerradas.
 const ORDER_TABS = [
   { key: "ingreso", label: "Ingreso" },
-  { key: "revision", label: "Revisar" },
   { key: "ordenes", label: "Ordenes" },
-  { key: "cerradas", label: "Cerradas" },
 ];
+
+const VALID_TABS = ["ingreso", "ordenes", "revision"];
 
 function tabHref(tab) {
   return `/erp/ordenes?tab=${tab}`;
@@ -113,7 +116,7 @@ function ReviewSearch({ id, run, nombre, hasSearch, orders }) {
 export default async function OrdersPage({ searchParams }) {
   const params = await searchParams;
   const requestedTab = String(params?.tab || "ordenes");
-  const tab = ORDER_TABS.some((item) => item.key === requestedTab) ? requestedTab : "ordenes";
+  const tab = VALID_TABS.includes(requestedTab) ? requestedTab : "ordenes";
   const search = String(params?.q || "");
 
   const pageSession = await readSession();
@@ -166,37 +169,8 @@ export default async function OrdersPage({ searchParams }) {
     );
   }
 
-  if (tab === "cerradas") {
-    const equipoId = String(params?.eq || "");
-    const [orders, equipment] = await Promise.all([
-      getClosedOrders({ limit: 300, search, equipoId }),
-      getEquipment(),
-    ]);
-    content = (
-      <section className="panel section-gap">
-        <div className="panel-header panel-header-wrap">
-          <h2>Ordenes cerradas</h2>
-          <form className="search-form">
-            <input type="hidden" name="tab" value="cerradas" />
-            <select name="eq" defaultValue={equipoId}>
-              <option value="">Todos los equipos</option>
-              {equipment.filter((e) => Number(e.estado) === 1).map((e) => (
-                <option key={e.id} value={e.id}>{e.nombre}</option>
-              ))}
-            </select>
-            <input name="q" defaultValue={search} placeholder="Buscar OT, cliente, RUT o modelo" />
-            <button className="ghost-button compact-button" type="submit">
-              Buscar
-            </button>
-          </form>
-        </div>
-        <OrdersTable orders={orders} canDelete={canDelete} />
-      </section>
-    );
-  }
-
   if (tab === "ordenes") {
-    const orders = await getOrders({ limit: 200, search });
+    const orders = await getOrders({ limit: 300, search });
     content = (
       <section className="panel section-gap">
         <div className="panel-header panel-header-wrap">
@@ -216,7 +190,7 @@ export default async function OrdersPage({ searchParams }) {
 
   return (
     <Shell active="ordenes" title="Ordenes de trabajo">
-      <OrderTabs active={tab} />
+      <OrderTabs active={tab === "revision" ? "ordenes" : tab} />
       {content}
     </Shell>
   );

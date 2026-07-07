@@ -1,17 +1,10 @@
 import Link from "next/link";
 import { ArrowRightCircle, BarChart3, Gem, Paperclip, Send } from "lucide-react";
 import Shell from "./Shell";
-import { formatDate, formatMoney, textOrDash } from "@/lib/format";
+import { formatDate, formatMoney, orderStatusPillClass, textOrDash } from "@/lib/format";
 import { getPendingDashboard } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
-
-function statusClass(estado) {
-  if (estado === 3) return "green";
-  if (estado === 2) return "";
-  if (estado === 1) return "yellow";
-  return "gray";
-}
 
 function DashboardCard({ href, active, value, label, action, icon: Icon }) {
   return (
@@ -122,7 +115,7 @@ export default async function DashboardPage({ searchParams }) {
                     <span className="subtext">{textOrDash(order.dispositivo_nombre)}</span>
                   </td>
                   <td className="text-center">
-                    <span className={`pill ${statusClass(order.estado)}`}>
+                    <span className={`pill ${orderStatusPillClass(order.estado)}`}>
                       {textOrDash(order.estado_nombre || order.estado)}
                     </span>
                   </td>

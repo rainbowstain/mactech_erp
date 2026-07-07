@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatDate, formatDateTime, formatMoney, textOrDash } from "@/lib/format";
+import { formatDate, formatDateTime, formatMoney, orderStatusPillClass, textOrDash } from "@/lib/format";
 import { notifySuccess, notifyWarning } from "@/lib/notify";
 
 const ORDER_STATES = [
@@ -250,7 +250,9 @@ export default function RevisionWorkflow({ order, workshopItems = [], canEditCos
         <div className="legacy-block-header">
           <h2>Datos de Orden</h2>
           <div className="revision-order-actions">
-            <span className="pill">{textOrDash(order.estado_nombre || order.estado)}</span>
+            <span className={`pill ${orderStatusPillClass(order.estado)}`}>
+              {textOrDash(order.estado_nombre || order.estado)}
+            </span>
             <Link className="action-button" href={`/erp/ordenes/${order.id}/protocolo`} title="Protocolo PDF">
               PDF
             </Link>

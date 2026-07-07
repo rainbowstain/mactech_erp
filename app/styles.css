@@ -1320,6 +1320,16 @@ tr:hover td {
   color: #374151;
 }
 
+.pill.blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.pill.red {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .role-pill {
   text-transform: capitalize;
 }

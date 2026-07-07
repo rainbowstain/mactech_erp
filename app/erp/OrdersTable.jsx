@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import { formatDate, formatMoney, textOrDash } from "@/lib/format";
+import { formatDate, formatMoney, orderStatusPillClass, textOrDash } from "@/lib/format";
 import { confirmAction, notifySuccess, notifyWarning } from "@/lib/notify";
 import DataTable from "./DataTable";
 
@@ -109,7 +109,11 @@ export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = f
           label: "Estado",
           value: (order) => order.estado_nombre || order.estado,
           filterOptions: estadoOptions,
-          render: (order) => <span className="pill">{textOrDash(order.estado_nombre || order.estado)}</span>,
+          render: (order) => (
+            <span className={`pill ${orderStatusPillClass(order.estado)}`}>
+              {textOrDash(order.estado_nombre || order.estado)}
+            </span>
+          ),
         },
         {
           key: "fecha",
@@ -120,6 +124,16 @@ export default function OrdersTable({ orders, actionLabel = "Ver", canDelete = f
           sortable: true,
           sortValue: (order) => new Date(order.created_at || order.fecha_entrega || 0).getTime(),
           sortLabels: { asc: "Fecha (más antigua)", desc: "Fecha (más reciente)" },
+        },
+        {
+          key: "entrega",
+          label: "Fecha de entrega",
+          value: (order) => formatDate(order.fecha_salida),
+          filterType: "date",
+          dateValue: (order) => order.fecha_salida,
+          sortable: true,
+          sortValue: (order) => new Date(order.fecha_salida || 0).getTime(),
+          sortLabels: { asc: "Entrega (más antigua)", desc: "Entrega (más reciente)" },
         },
         {
           key: "total",

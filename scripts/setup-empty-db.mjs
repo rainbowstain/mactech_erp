@@ -12,7 +12,7 @@ const root = path.resolve(__dirname, "..");
 const schemaPath = path.join(root, "db", "schema.sql");
 
 const ORDER_STATES = [
-  [1, "INGRESADA"],
+  [1, "INGRESADO"],
   [2, "EN REVISION"],
   [3, "PARA RETIRO"],
   [4, "GARANTIA"],
