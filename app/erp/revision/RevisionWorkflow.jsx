@@ -363,7 +363,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
               PDF
             </Link>
             {canReprint ? (
-              <Link className="action-button" href={`/erp/ordenes/${order.id}/pdf`} title="Reimprimir Orden de salida">
+              <Link className="ghost-button compact-button" href={`/erp/ordenes/${order.id}/pdf`} title="Reimprimir Orden de salida">
                 Reimprimir OT
               </Link>
             ) : null}

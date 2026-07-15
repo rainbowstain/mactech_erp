@@ -26,7 +26,7 @@ export default function WarrantyButton({ orderId, active }) {
 
   return (
     <button
-      className="action-button"
+      className="ghost-button compact-button"
       type="button"
       disabled={saving}
       onClick={toggleWarranty}

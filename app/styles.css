@@ -3020,7 +3020,8 @@ tr:hover td {
 .revision-order-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px 10px;
 }
 
 .revision-edit-hint {
@@ -3925,6 +3926,20 @@ tr:hover td {
 }
 
 @media (max-width: 900px) {
+  .legacy-block-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .legacy-block-header h2 {
+    flex: 1 1 100%;
+  }
+
+  .revision-order-actions {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
   .login-card {
     padding: 32px 22px 26px;
   }
