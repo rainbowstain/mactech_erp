@@ -1,5 +1,6 @@
 import "./styles.css";
 import Providers from "./Providers";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata = {
   title: "MacTech ERP",
@@ -29,6 +30,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
