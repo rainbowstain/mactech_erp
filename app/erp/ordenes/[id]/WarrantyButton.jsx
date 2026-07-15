@@ -2,21 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, ShieldOff } from "lucide-react";
 import { notifyWarning, notifySuccess } from "@/lib/notify";
 
-export default function WarrantyButton({ orderId }) {
+export default function WarrantyButton({ orderId, active }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 
-  async function activateWarranty() {
+  async function toggleWarranty() {
     setSaving(true);
     try {
-      const response = await fetch(`/api/erp/ordenes/${orderId}/garantia`, { method: "POST" });
+      const response = await fetch(`/api/erp/ordenes/${orderId}/garantia`, { method: active ? "DELETE" : "POST" });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "No se pudo activar garantia.");
-      notifySuccess("Garantia activada.");
-      router.push(`/erp/ordenes?tab=revision&idOrden=${orderId}`);
+      if (!response.ok) throw new Error(payload.message || "No se pudo actualizar la garantia.");
+      notifySuccess(active ? "Garantia desactivada." : "Garantia activada.");
       router.refresh();
     } catch (error) {
       notifyWarning(error.message);
@@ -26,11 +25,15 @@ export default function WarrantyButton({ orderId }) {
   }
 
   return (
-    <div className="warranty-action">
-      <button className="primary-button inline-primary compact-button" type="button" disabled={saving} onClick={activateWarranty}>
-        <ShieldCheck size={16} aria-hidden="true" />
-        {saving ? "Activando..." : "Activar garantia"}
-      </button>
-    </div>
+    <button
+      className="action-button"
+      type="button"
+      disabled={saving}
+      onClick={toggleWarranty}
+      title={active ? "Desactivar garantia" : "Activar garantia"}
+    >
+      {active ? <ShieldOff size={15} aria-hidden="true" /> : <ShieldCheck size={15} aria-hidden="true" />}
+      {saving ? "..." : active ? "Desactivar garantía" : "Activar garantía"}
+    </button>
   );
 }

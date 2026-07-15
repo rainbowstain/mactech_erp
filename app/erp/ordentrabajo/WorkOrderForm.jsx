@@ -58,7 +58,7 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
     reparaciones: [{ reparacion_id: "", inventario_item_id: "", precio_unitario: "" }],
     estado_dispositivo: "",
     codigo: "",
-    imei: "",
+    abono: "",
     total_recepcion: "0",
     observacion: "",
     tecnico: currentUserName,
@@ -581,12 +581,12 @@ export default function WorkOrderForm({ equipment, devices, states, questions, p
             </div>
 
             <div className="legacy-form-grid legacy-form-grid-three">
-              <Field label="IMEI o Serie">
+              <Field label="Abono">
                 <input
                   inputMode="numeric"
-                  placeholder="Imei o Serie"
-                  value={order.imei}
-                  onChange={(event) => updateOrder("imei", event.target.value.replace(/[-+eE]/g, ""))}
+                  placeholder="Monto que deja el cliente"
+                  value={order.abono}
+                  onChange={(event) => updateOrder("abono", event.target.value.replace(/\D/g, ""))}
                 />
               </Field>
               <Field label="Fecha Entrega">

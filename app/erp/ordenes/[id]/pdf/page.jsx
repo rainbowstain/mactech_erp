@@ -26,6 +26,8 @@ export default async function OrderPdfPage({ params }) {
   // Las correcciones de datos (ver boton "Editar" en revision) son control
   // interno: no van en la OT que se entrega al cliente.
   const printedRevisions = order.revisions.filter((revision) => !revision.es_interno);
+  const abono = Number(order.abono || 0);
+  const saldo = Math.max(0, Number(order.total || 0) - abono);
 
   return (
     <main className="print-page work-order-print-page">
@@ -77,7 +79,6 @@ export default async function OrderPdfPage({ params }) {
               <div>
                 <PrintField label="Fecha de Ingreso" value={formatDateTime(order.created_at)} />
                 <PrintField label="Fecha de Entrega" value={formatDate(order.fecha_entrega)} />
-                <PrintField label="Serie" value={order.imei} />
               </div>
             </div>
           </div>
@@ -150,6 +151,8 @@ export default async function OrderPdfPage({ params }) {
             <div><span>IVA</span><strong>{formatMoney(order.iva)}</strong></div>
             <div><span>DESCUENTO</span><strong>{formatMoney(order.descuento)}</strong></div>
             <div><span>TOTAL</span><strong>{formatMoney(order.total)}</strong></div>
+            <div><span>ABONO</span><strong>{formatMoney(abono)}</strong></div>
+            <div><span>SALDO</span><strong>{formatMoney(saldo)}</strong></div>
           </div>
         </footer>
       </article>

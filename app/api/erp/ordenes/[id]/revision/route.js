@@ -89,6 +89,7 @@ export async function POST(request, { params }) {
         );
       }
 
+      await db.query("alter table ordenes add column if not exists abono integer default 0");
       await db.query("alter table inventario_items add column if not exists ultimo_precio_venta integer");
       await db.query("alter table inventario_items add column if not exists ultimo_precio_fecha timestamptz");
       await db.query("alter table inventario_items add column if not exists ultima_orden_id integer");
@@ -181,6 +182,7 @@ export async function POST(request, { params }) {
             iva = $5,
             descuento = $6,
             total = $7,
+            abono = $8,
             fecha_entrega = case when $2 = 5 then coalesce(fecha_entrega, now()) else fecha_entrega end,
             fecha_salida = case when $2 = 5 then now() else fecha_salida end
           where id = $1
@@ -193,6 +195,7 @@ export async function POST(request, { params }) {
           totals.iva,
           totals.descuento,
           totals.total,
+          asInt(body.abono, 0),
         ]
       );
 

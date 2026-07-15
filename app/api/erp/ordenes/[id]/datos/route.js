@@ -5,9 +5,11 @@ import { formatDate } from "@/lib/format";
 import { formatRut } from "@/lib/rut";
 
 // Corrige datos de intake (cliente + orden) desde la revision de la OT.
-// Sirve para arreglar errores de tipeo del ingreso (nombre, RUT, IMEI,
+// Sirve para arreglar errores de tipeo del ingreso (nombre, RUT,
 // marca/modelo, etc). Queda un registro en el historial con el valor
 // antiguo y el nuevo (es_interno = true: no sale en la OT impresa).
+// La Observación es la excepción: se imprime en la Orden de salida, así que
+// editarla aquí permite corregir el texto antes de reimprimir una OT cerrada.
 
 function asPositiveInt(value) {
   const number = Number(value);
@@ -59,19 +61,19 @@ export async function PATCH(request, { params }) {
     fono: asNullableText(clientePayload.fono),
   };
   const nextOrden = {
-    imei: asNullableText(ordenPayload.imei),
     codigo: asNullableText(ordenPayload.codigo),
     fecha_entrega: asTimestamp(ordenPayload.fecha_entrega),
     tecnico: asNullableText(ordenPayload.tecnico),
     id_equipo: asPositiveInt(ordenPayload.id_equipo),
     id_dispositivo: asPositiveInt(ordenPayload.id_dispositivo),
+    observacion: asNullableText(ordenPayload.observacion),
   };
 
   try {
     const result = await transaction(async (db) => {
       const orderResult = await db.query(
         `
-          select o.id, o.imei, o.codigo, o.fecha_entrega, o.tecnico, o.id_equipo, o.id_dispositivo, o.cliente_id,
+          select o.id, o.codigo, o.fecha_entrega, o.tecnico, o.id_equipo, o.id_dispositivo, o.cliente_id, o.observacion,
                  e.nombre as equipo_nombre, d.nombre as dispositivo_nombre
           from ordenes o
           left join equipos e on e.id = o.id_equipo
@@ -98,9 +100,9 @@ export async function PATCH(request, { params }) {
         if (!sameText(currentCliente.fono, nextCliente.fono)) changes.push(diffLine("Teléfono", currentCliente.fono, nextCliente.fono));
       }
 
-      if (!sameText(currentOrder.imei, nextOrden.imei)) changes.push(diffLine("IMEI", currentOrder.imei, nextOrden.imei));
       if (!sameText(currentOrder.codigo, nextOrden.codigo)) changes.push(diffLine("Código", currentOrder.codigo, nextOrden.codigo));
       if (!sameText(currentOrder.tecnico, nextOrden.tecnico)) changes.push(diffLine("Técnico", currentOrder.tecnico, nextOrden.tecnico));
+      if (!sameText(currentOrder.observacion, nextOrden.observacion)) changes.push("Observación editada (ver texto actual en la orden).");
       if (!sameDate(currentOrder.fecha_entrega, nextOrden.fecha_entrega)) {
         changes.push(diffLine("Fecha entrega", formatDate(currentOrder.fecha_entrega), formatDate(nextOrden.fecha_entrega)));
       }
@@ -138,10 +140,18 @@ export async function PATCH(request, { params }) {
       await db.query(
         `
           update ordenes
-          set imei = $1, codigo = $2, fecha_entrega = $3, tecnico = $4, id_equipo = $5, id_dispositivo = $6
+          set codigo = $1, fecha_entrega = $2, tecnico = $3, id_equipo = $4, id_dispositivo = $5, observacion = $6
           where id = $7
         `,
-        [nextOrden.imei, nextOrden.codigo, nextOrden.fecha_entrega, nextOrden.tecnico, nextOrden.id_equipo, nextOrden.id_dispositivo, orderId]
+        [
+          nextOrden.codigo,
+          nextOrden.fecha_entrega,
+          nextOrden.tecnico,
+          nextOrden.id_equipo,
+          nextOrden.id_dispositivo,
+          nextOrden.observacion,
+          orderId,
+        ]
       );
 
       await db.query(

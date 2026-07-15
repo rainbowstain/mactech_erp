@@ -61,3 +61,42 @@ export async function POST(_request, { params }) {
     return NextResponse.json({ message: "No se pudo activar garantia." }, { status: 500 });
   }
 }
+
+// Desactiva la garantia: vuelve la orden a Entregado sin tocar totales/pagos
+// (esos ya quedaron fijados al cerrar la orden la primera vez).
+export async function DELETE(_request, { params }) {
+  const session = await readSession();
+  if (!session) return NextResponse.json({ message: "No autorizado." }, { status: 401 });
+
+  const { id } = await params;
+  const orderId = asPositiveInt(id);
+  if (!orderId) return NextResponse.json({ message: "Orden invalida." }, { status: 400 });
+
+  try {
+    const result = await transaction(async (db) => {
+      const orderResult = await db.query("select * from ordenes where id = $1 for update", [orderId]);
+      const order = orderResult.rows[0];
+      if (!order) return { missing: true };
+      if (Number(order.estado) !== 4) return { invalidState: true };
+
+      await db.query("update ordenes set estado = 5 where id = $1", [orderId]);
+
+      await db.query(
+        `
+          insert into revisiones (orden_id, responsable, id_estado, observacion, garantia_id, created_at)
+          values ($1, $2, 5, $3, $4, now())
+        `,
+        [orderId, session.name || session.email, "Garantia desactivada, orden vuelve a Entregado.", order.id_ultima_garantia || null]
+      );
+
+      return { id: orderId, deactivated: true };
+    });
+
+    if (result.missing) return NextResponse.json({ message: "Orden no encontrada." }, { status: 404 });
+    if (result.invalidState) return NextResponse.json({ message: "Solo se puede desactivar garantia si esta activa." }, { status: 400 });
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("deactivate warranty failed", error);
+    return NextResponse.json({ message: "No se pudo desactivar garantia." }, { status: 500 });
+  }
+}

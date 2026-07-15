@@ -35,6 +35,7 @@ export default async function OrderProtocolPage({ params }) {
     order.repuestos?.reduce((sum, part) => sum + Number(part.total_venta || 0), 0) ||
     Number(order.total || 0) ||
     Number(order.total_recepcion || 0);
+  const protocolAbono = Number(order.abono || 0);
 
   return (
     <main className="print-page protocol-print-page">
@@ -82,11 +83,10 @@ export default async function OrderProtocolPage({ params }) {
             </div>
             <div>
               <PrintField label="Telefono" value={order.cliente_fono} />
-              <PrintField label="Imei" value={order.imei} />
+              <PrintField label="Codigo Acceso" value={order.codigo} />
             </div>
             <div>
               <PrintField label="E-mail" value={order.cliente_mail} className="is-email" />
-              <PrintField label="Codigo Acceso" value={order.codigo} />
             </div>
           </div>
         </section>
@@ -119,6 +119,11 @@ export default async function OrderProtocolPage({ params }) {
           </div>
           <div className="legacy-value-box">
             <h2>{formatMoney(protocolTotal)}</h2>
+            {protocolAbono > 0 ? (
+              <p className="legacy-value-abono">
+                Abono: {formatMoney(protocolAbono)} · Saldo: {formatMoney(Math.max(0, protocolTotal - protocolAbono))}
+              </p>
+            ) : null}
           </div>
         </section>
 

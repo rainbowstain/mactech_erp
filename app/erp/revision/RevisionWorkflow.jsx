@@ -7,6 +7,7 @@ import { Edit3, Save, X } from "lucide-react";
 import { formatDate, formatDateTime, formatMoney, orderStatusPillClass, textOrDash } from "@/lib/format";
 import { notifySuccess, notifyWarning } from "@/lib/notify";
 import { formatRut } from "@/lib/rut";
+import WarrantyButton from "@/app/erp/ordenes/[id]/WarrantyButton";
 
 const ORDER_STATES = [
   { id: 2, label: "En diagnostico" },
@@ -69,12 +70,12 @@ function buildDataDraft(order) {
     run: formatRut(order.cliente_run) || "",
     mail: order.cliente_mail || "",
     fono: order.cliente_fono || "",
-    imei: order.imei || "",
     codigo: order.codigo || "",
     tecnico: order.tecnico || "",
     fecha_entrega: toDateInputValue(order.fecha_entrega),
     id_equipo: order.id_equipo ? String(order.id_equipo) : "",
     id_dispositivo: order.id_dispositivo ? String(order.id_dispositivo) : "",
+    observacion: order.observacion || "",
   };
 }
 
@@ -95,6 +96,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
   const [estado, setEstado] = useState(String(order.estado >= 5 ? order.estado : Math.max(2, order.estado || 2)));
   const [metodopago, setMetodopago] = useState(order.metodopago || "");
   const [descuento, setDescuento] = useState(toInt(order.descuento));
+  const [abono, setAbono] = useState(toInt(order.abono));
   const [partQuery, setPartQuery] = useState("");
   const [partOpen, setPartOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -134,6 +136,8 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
   });
 
   const isClosed = Number(order.estado) >= 5;
+  const isWarranty = Number(order.estado) === 4;
+  const canReprint = isClosed || isWarranty;
   const dataDevices = useMemo(
     () => devices.filter((device) => String(device.modelo) === String(dataDraft.id_equipo)),
     [devices, dataDraft.id_equipo]
@@ -168,6 +172,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
         total: toInt(order.total),
       }
     : totals;
+  const saldo = Math.max(0, displayTotals.total - toInt(isClosed ? order.abono : abono));
 
   function addPart(itemId) {
     const id = Number(itemId);
@@ -249,12 +254,12 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
             fono: dataDraft.fono,
           },
           orden: {
-            imei: dataDraft.imei,
             codigo: dataDraft.codigo,
             tecnico: dataDraft.tecnico,
             fecha_entrega: dataDraft.fecha_entrega,
             id_equipo: dataDraft.id_equipo,
             id_dispositivo: dataDraft.id_dispositivo,
+            observacion: dataDraft.observacion,
           },
         }),
       });
@@ -320,6 +325,7 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
           repuestos: partRows,
           serviceTotal: partsTotal,
           descuento,
+          abono,
           metodopago,
         }),
       });
@@ -356,11 +362,12 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
             <Link className="action-button" href={`/erp/ordenes/${order.id}/protocolo`} title="Protocolo PDF">
               PDF
             </Link>
-            {isClosed ? (
-              <Link className="action-button" href={`/erp/ordenes/${order.id}/pdf`} title="Orden PDF">
-                OT
+            {canReprint ? (
+              <Link className="action-button" href={`/erp/ordenes/${order.id}/pdf`} title="Reimprimir Orden de salida">
+                Reimprimir OT
               </Link>
             ) : null}
+            {isClosed || isWarranty ? <WarrantyButton orderId={order.id} active={isWarranty} /> : null}
             {!editingData ? (
               <button className="action-button" type="button" onClick={openDataEdit} title="Corregir datos de intake">
                 <Edit3 size={15} aria-hidden="true" />
@@ -373,7 +380,8 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
         </div>
         {editingData ? (
           <p className="revision-edit-hint">
-            Corrigiendo datos de ingreso — queda en el historial interno, no se imprime en la OT de salida.
+            Corrigiendo datos de ingreso — queda en el historial interno (no se imprime en la OT de salida), salvo la
+            Observación: esa sí es la que sale impresa al reimprimir la orden.
           </p>
         ) : null}
         <div className="legacy-form-grid legacy-form-grid-three">
@@ -443,11 +451,6 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
             <ReadonlyField label="Modelo" value={order.dispositivo_nombre} />
           )}
           {editingData ? (
-            <EditableField label="IMEI" value={dataDraft.imei} onChange={(value) => updateDataDraft("imei", value)} />
-          ) : (
-            <ReadonlyField label="IMEI" value={order.imei} />
-          )}
-          {editingData ? (
             <EditableField label="Codigo" value={dataDraft.codigo} onChange={(value) => updateDataDraft("codigo", value)} />
           ) : (
             <ReadonlyField label="Codigo" value={order.codigo} />
@@ -478,7 +481,16 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
         ) : null}
         <label className="legacy-field legacy-field-wide">
           <span>Observacion:</span>
-          <textarea value={textOrDash(order.observacion)} readOnly rows={4} />
+          {editingData ? (
+            <textarea
+              value={dataDraft.observacion}
+              onChange={(event) => updateDataDraft("observacion", event.target.value)}
+              rows={4}
+              placeholder="Observacion que se imprime en la Orden de salida"
+            />
+          ) : (
+            <textarea value={textOrDash(order.observacion)} readOnly rows={4} />
+          )}
         </label>
       </section>
 
@@ -713,6 +725,16 @@ export default function RevisionWorkflow({ order, workshopItems = [], equipment 
               />
             </label>
             <ReadonlyField label="Total" value={formatMoney(displayTotals.total)} />
+            <label className="legacy-field">
+              <span>Abono:</span>
+              <input
+                inputMode="numeric"
+                value={abono}
+                placeholder="Monto que dejó el cliente"
+                onChange={(event) => setAbono(event.target.value.replace(/\D/g, ""))}
+              />
+            </label>
+            <ReadonlyField label="Saldo" value={formatMoney(saldo)} />
             <label className="legacy-field">
               <span>Metodo Pago:</span>
               <select value={metodopago} onChange={(event) => setMetodopago(event.target.value)}>
