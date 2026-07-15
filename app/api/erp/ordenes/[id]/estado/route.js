@@ -44,10 +44,11 @@ export async function PATCH(request, { params }) {
     }
 
     await query("update ordenes set estado = $2 where id = $1", [orderId, estado]);
-    // Queda registro en el historial de revisiones de la orden.
+    // Queda registro en el historial interno de revisiones (es_interno = true:
+    // no debe salir en la OT impresa, es solo trazabilidad del cambio rapido).
     await query(
-      `insert into revisiones (orden_id, responsable, id_estado, observacion, created_at)
-       values ($1, $2, $3, $4, now())`,
+      `insert into revisiones (orden_id, responsable, id_estado, observacion, es_interno, created_at)
+       values ($1, $2, $3, $4, true, now())`,
       [orderId, session.name || session.email, estado, "Cambio rápido de estado desde la tabla de órdenes."]
     );
 

@@ -25,7 +25,17 @@ export default async function OrderPdfPage({ params }) {
 
   // Las correcciones de datos (ver boton "Editar" en revision) son control
   // interno: no van en la OT que se entrega al cliente.
-  const printedRevisions = order.revisions.filter((revision) => !revision.es_interno);
+  // Si el mismo texto quedo guardado varias veces (p.ej. "Guardar" repetido
+  // antes de "Finalizar"), en la OT impresa se muestra una sola vez —viene
+  // ordenado del mas reciente al mas antiguo, asi que se conserva esa fecha.
+  const seenObservaciones = new Set();
+  const printedRevisions = order.revisions.filter((revision) => {
+    if (revision.es_interno) return false;
+    const text = (revision.observacion || "").trim();
+    if (seenObservaciones.has(text)) return false;
+    seenObservaciones.add(text);
+    return true;
+  });
   const abono = Number(order.abono || 0);
   const saldo = Math.max(0, Number(order.total || 0) - abono);
 
