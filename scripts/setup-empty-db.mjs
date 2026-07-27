@@ -118,10 +118,6 @@ async function main() {
       await client.query("insert into preguntas (descripcion, estado) values ($1, 1)", [question]);
     }
 
-    await client.query(
-      "insert into finanzas_tramos (desde, porcentaje_eduardo, porcentaje_tienda, descripcion, estado) values (0, 0, 1, 'Base inicial', 1)"
-    );
-
     const hash = await bcrypt.hash(adminPassword, 10);
     await client.query(
       "insert into users (name, email, role, estado, password, updated_at) values ($1, $2, 'admin', true, $3, now())",

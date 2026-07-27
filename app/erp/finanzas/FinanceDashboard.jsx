@@ -34,7 +34,7 @@ function inputDateForPeriod(summary) {
 }
 
 function EvolutionChart({ rows }) {
-  const max = Math.max(1, ...rows.map((row) => Math.max(row.ingresos, row.utilidad_neta, row.monto_eduardo)));
+  const max = Math.max(1, ...rows.map((row) => Math.max(row.ingresos, row.utilidad_neta)));
   const points = rows.map((row, index) => {
     const x = 24 + index * (520 / 11);
     const y = 180 - (Math.max(0, row.utilidad_neta) / max) * 145;
@@ -45,17 +45,15 @@ function EvolutionChart({ rows }) {
     <div className="finance-chart-card">
       <div className="finance-chart-heading">
         <h2>Evolucion anual</h2>
-        <span>Ingresos, utilidad y reparto</span>
+        <span>Ingresos y utilidad</span>
       </div>
       <svg className="finance-chart" viewBox="0 0 590 220" role="img" aria-label="Evolucion financiera anual">
         {rows.map((row, index) => {
           const x = 24 + index * (520 / 11);
           const incomeHeight = (Math.max(0, row.ingresos) / max) * 145;
-          const eduHeight = (Math.max(0, row.monto_eduardo) / max) * 145;
           return (
             <g key={row.month}>
-              <rect x={x - 12} y={180 - incomeHeight} width="10" height={incomeHeight} className="finance-bar-income" />
-              <rect x={x + 2} y={180 - eduHeight} width="10" height={eduHeight} className="finance-bar-edu" />
+              <rect x={x - 5} y={180 - incomeHeight} width="10" height={incomeHeight} className="finance-bar-income" />
               <text x={x} y="204" textAnchor="middle">{MONTHS[index].slice(0, 3)}</text>
             </g>
           );
@@ -64,7 +62,6 @@ function EvolutionChart({ rows }) {
       </svg>
       <div className="finance-chart-legend">
         <span><i className="legend-income" />Ingresos</span>
-        <span><i className="legend-edu" />Eduardo</span>
         <span><i className="legend-profit" />Utilidad neta</span>
       </div>
     </div>
@@ -153,8 +150,6 @@ export default function FinanceDashboard({ summary, annualRows, insights, dailyR
         <div className="stat"><span>Publicidad</span><strong>{formatMoney(summary.publicidad)}</strong></div>
         <div className="stat"><span>Utilidad neta</span><strong>{formatMoney(summary.utilidad_neta)}</strong></div>
         <div className="stat"><span>Compras / inversion</span><strong>{formatMoney(summary.compras)}</strong></div>
-        <div className="stat"><span>Eduardo</span><strong>{formatMoney(summary.monto_eduardo)}</strong></div>
-        <div className="stat"><span>Tienda</span><strong>{formatMoney(summary.monto_tienda)}</strong></div>
       </section>
 
       <section className="finance-decision-grid">
@@ -178,9 +173,6 @@ export default function FinanceDashboard({ summary, annualRows, insights, dailyR
           <div><span>Ingresos historicos</span><strong>{formatMoney(summary.ingresos_historicos)}</strong></div>
           <div><span>Liquido historico</span><strong>{formatMoney(summary.liquido_historico)}</strong></div>
           <div><span>Otros gastos</span><strong>{formatMoney(summary.otros_gastos)}</strong></div>
-          <div><span>% Eduardo promedio</span><strong>{pct(summary.porcentaje_eduardo_promedio)}</strong></div>
-          <div><span>% Tienda promedio</span><strong>{pct(summary.porcentaje_tienda_promedio)}</strong></div>
-          <div><span>Tramo operativo</span><strong>{summary.tramo_descripcion || "Sin descripcion"}</strong></div>
         </div>
       </section>
 

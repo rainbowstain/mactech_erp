@@ -17,7 +17,6 @@ import {
   PanelLeftOpen,
   ReceiptText,
   Settings,
-  SlidersHorizontal,
 } from "lucide-react";
 import LogoutButton from "./LogoutButton";
 import ThemeToggle from "./ThemeToggle";
@@ -35,7 +34,6 @@ const salesItems = [{ href: "/erp/ventas/productos", label: "Venta Productos", i
 const financeItems = [
   { href: "/erp/finanzas", label: "Dashboard", icon: DollarSign, active: "finanzas-dashboard" },
   { href: "/erp/finanzas/gastos", label: "Gastos", icon: ReceiptText, active: "finanzas-gastos" },
-  { href: "/erp/finanzas/tramos", label: "Tramos", icon: SlidersHorizontal, active: "finanzas-tramos" },
   { href: "/erp/finanzas/reporte", label: "Reporte Mensual", icon: FileBarChart, active: "finanzas-reporte" },
 ];
 
